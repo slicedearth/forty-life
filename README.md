@@ -1,4 +1,4 @@
-# MTG Life Counter
+# Forty Life
 
 A simple, touch-friendly life counter for Magic: The Gathering, built for a single shared device passed around the table.
 
