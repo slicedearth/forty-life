@@ -61,6 +61,15 @@
   style:background={player.color}
   class:rotate-180={rotate}
 >
+  {#if player.commanders?.length}
+    <div class="pointer-events-none absolute inset-0 flex">
+      {#each player.commanders as commander (commander.name)}
+        <div class="flex-1 bg-cover bg-center" style:background-image="url('{commander.imageUrl}')"></div>
+      {/each}
+    </div>
+    <div class="pointer-events-none absolute inset-0 bg-black/45"></div>
+  {/if}
+
   <button
     type="button"
     aria-label="Increase {player.name}'s life"

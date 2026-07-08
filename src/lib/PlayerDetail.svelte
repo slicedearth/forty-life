@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { Player } from './types'
+  import type { CommanderCard, Player } from './types'
+  import CommanderPicker from './CommanderPicker.svelte'
 
   interface Props {
     player: Player
@@ -10,10 +11,20 @@
     onPoisonChange: (delta: number) => void
     onCommanderDamageChange: (opponentId: number, delta: number) => void
     onRename: (name: string) => void
+    onCommandersChange: (cards: CommanderCard[]) => void
   }
 
-  const { player, opponents, rotate, onClose, onLifeChange, onPoisonChange, onCommanderDamageChange, onRename }: Props =
-    $props()
+  const {
+    player,
+    opponents,
+    rotate,
+    onClose,
+    onLifeChange,
+    onPoisonChange,
+    onCommanderDamageChange,
+    onRename,
+    onCommandersChange,
+  }: Props = $props()
 </script>
 
 <div
@@ -44,6 +55,11 @@
         ✕
       </button>
     </div>
+
+    <section>
+      <p class="mb-2 text-sm font-medium text-gray-400">Commander art</p>
+      <CommanderPicker value={player.commanders} onChange={onCommandersChange} />
+    </section>
 
     <section>
       <div class="mb-2 flex items-center justify-between">

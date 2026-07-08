@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { PLAYER_COLORS } from './types'
+  import { PLAYER_COLORS, type CommanderCard } from './types'
+  import CommanderPicker from './CommanderPicker.svelte'
 
   interface PlayerConfig {
     name: string
     color: string
+    commanders: CommanderCard[]
   }
 
   interface Props {
@@ -26,6 +28,7 @@
     return Array.from({ length: count }, (_, i) => ({
       name: `Player ${i + 1}`,
       color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+      commanders: [],
     }))
   }
 
@@ -42,6 +45,7 @@
     const configs = playerConfigs.map((p, i) => ({
       name: p.name.trim() || `Player ${i + 1}`,
       color: p.color,
+      commanders: p.commanders,
     }))
     onStart(configs, life)
   }
@@ -102,26 +106,29 @@
     <p class="mb-3 text-sm font-medium text-gray-400">Names &amp; colors</p>
     <div class="flex flex-col gap-2">
       {#each playerConfigs as config, i (i)}
-        <div class="flex items-center gap-2 rounded-xl border border-white/10 p-2">
-          <input
-            type="text"
-            bind:value={config.name}
-            placeholder="Player {i + 1}"
-            class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-left font-medium text-white placeholder:text-gray-500 focus:outline-none"
-          />
-          <div class="flex flex-shrink-0 gap-1">
-            {#each PLAYER_COLORS as color (color)}
-              <button
-                type="button"
-                aria-label="Choose color {color}"
-                class="h-6 w-6 rounded-full border-2 transition-transform {config.color === color
-                  ? 'scale-110 border-white'
-                  : 'border-transparent hover:scale-105'}"
-                style:background={color}
-                onclick={() => (config.color = color)}
-              ></button>
-            {/each}
+        <div class="flex flex-col gap-2 rounded-xl border border-white/10 p-2">
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              bind:value={config.name}
+              placeholder="Player {i + 1}"
+              class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-left font-medium text-white placeholder:text-gray-500 focus:outline-none"
+            />
+            <div class="flex flex-shrink-0 gap-1">
+              {#each PLAYER_COLORS as color (color)}
+                <button
+                  type="button"
+                  aria-label="Choose color {color}"
+                  class="h-6 w-6 rounded-full border-2 transition-transform {config.color === color
+                    ? 'scale-110 border-white'
+                    : 'border-transparent hover:scale-105'}"
+                  style:background={color}
+                  onclick={() => (config.color = color)}
+                ></button>
+              {/each}
+            </div>
           </div>
+          <CommanderPicker value={config.commanders} onChange={cards => (config.commanders = cards)} />
         </div>
       {/each}
     </div>

@@ -2,7 +2,7 @@
   import SetupScreen from './lib/SetupScreen.svelte'
   import PlayerCounter from './lib/PlayerCounter.svelte'
   import PlayerDetail from './lib/PlayerDetail.svelte'
-  import { LAYOUTS, GRID_COLUMNS, type Player, type HistoryEntry } from './lib/types'
+  import { LAYOUTS, GRID_COLUMNS, type Player, type HistoryEntry, type CommanderCard } from './lib/types'
 
   const STORAGE_KEY = 'mtg-life-counter'
   const MAX_HISTORY = 50
@@ -40,7 +40,7 @@
     }
   })
 
-  function startGame(configs: { name: string; color: string }[], life: number) {
+  function startGame(configs: { name: string; color: string; commanders: CommanderCard[] }[], life: number) {
     startingLife = life
     players = configs.map((config, i) => ({
       id: i,
@@ -49,6 +49,7 @@
       life,
       poison: 0,
       commanderDamage: {},
+      commanders: config.commanders,
     }))
     history = []
     phase = 'game'
@@ -82,6 +83,10 @@
 
   function renamePlayer(id: number, name: string) {
     players = players.map(p => (p.id === id ? { ...p, name } : p))
+  }
+
+  function updateCommanders(id: number, commanders: CommanderCard[]) {
+    players = players.map(p => (p.id === id ? { ...p, commanders } : p))
   }
 
   function undo() {
@@ -196,6 +201,7 @@
           onCommanderDamageChange={(opponentId, delta) =>
             updateCommanderDamage(detailPlayer.id, opponentId, delta)}
           onRename={name => renamePlayer(detailPlayer.id, name)}
+          onCommandersChange={cards => updateCommanders(detailPlayer.id, cards)}
         />
       {/if}
     </div>

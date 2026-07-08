@@ -1,3 +1,21 @@
+/** How a commander pairs with a second commander, derived from its oracle text. */
+export type PartnerMode =
+  | 'partner'
+  | 'partner-with'
+  | 'background'
+  | 'friends-forever'
+  | 'doctors-companion'
+  | 'time-lord-doctor'
+  | null
+
+export interface CommanderCard {
+  name: string
+  imageUrl: string
+  partnerMode: PartnerMode
+  /** Only set when partnerMode is 'partner-with' — the exact card it pairs with. */
+  partnerWithName: string | null
+}
+
 export interface Player {
   id: number
   name: string
@@ -6,6 +24,8 @@ export interface Player {
   poison: number
   /** Damage taken from each opponent, keyed by opponent id. 21+ from one opponent is lethal. */
   commanderDamage: Record<number, number>
+  /** Scryfall art for this player's commander(s), shown as their counter background. 0, 1, or 2 entries. */
+  commanders: CommanderCard[]
 }
 
 export interface LayoutRow {
