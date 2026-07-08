@@ -39,7 +39,6 @@
   let monarchId = $state<number | null>(saved?.monarchId ?? null)
   let initiativeId = $state<number | null>(saved?.initiativeId ?? null)
   let dayNight = $state<'day' | 'night'>(saved?.dayNight ?? 'day')
-  let menuOpen = $state(false)
 
   $effect(() => {
     if (phase === 'game') {
@@ -197,75 +196,49 @@
         {/each}
       </div>
 
-      {#if menuOpen}
-        <div
-          class="pointer-events-auto fixed inset-0 z-40"
-          onclick={() => (menuOpen = false)}
-          role="presentation"
-        ></div>
-      {/if}
+      <div
+        class="pointer-events-none absolute inset-0 z-30 transition-colors duration-700"
+        style:background-color={dayNight === 'night' ? 'rgba(30, 27, 75, 0.45)' : 'transparent'}
+      ></div>
 
-      <div class="pointer-events-none absolute inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center">
-        <div class="relative">
-          <button
-            type="button"
-            aria-label="Game menu"
-            class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white/80 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
-            onclick={() => (menuOpen = !menuOpen)}
-          >
-            <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
-              <circle cx="4" cy="10" r="1.5" />
-              <circle cx="10" cy="10" r="1.5" />
-              <circle cx="16" cy="10" r="1.5" />
-            </svg>
-          </button>
-
-          {#if menuOpen}
-            <div
-              class="pointer-events-auto absolute top-full left-1/2 mt-2 flex w-36 -translate-x-1/2 flex-col gap-1 rounded-xl border border-white/15 bg-black/80 p-2 backdrop-blur"
-            >
-              <button
-                type="button"
-                class="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
-                onclick={() => {
-                  undo()
-                  menuOpen = false
-                }}
-                disabled={history.length === 0}
-              >
-                Undo
-              </button>
-              <button
-                type="button"
-                class="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                onclick={() => {
-                  resetLife()
-                  menuOpen = false
-                }}
-              >
-                Reset Life
-              </button>
-              <button
-                type="button"
-                class="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                onclick={() => {
-                  newGame()
-                  menuOpen = false
-                }}
-              >
-                New Game
-              </button>
-              <button
-                type="button"
-                aria-label="Toggle day or night"
-                class="rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                onclick={toggleDayNight}
-              >
-                {dayNight === 'day' ? '☀️ Day' : '🌙 Night'}
-              </button>
-            </div>
-          {/if}
-        </div>
+      <div class="pointer-events-none absolute inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center gap-3">
+        <button
+          type="button"
+          aria-label="Undo"
+          title="Undo"
+          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
+          onclick={undo}
+          disabled={history.length === 0}
+        >
+          ↩️
+        </button>
+        <button
+          type="button"
+          aria-label="Reset Life"
+          title="Reset Life"
+          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
+          onclick={resetLife}
+        >
+          🔄
+        </button>
+        <button
+          type="button"
+          aria-label="New Game"
+          title="New Game"
+          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
+          onclick={newGame}
+        >
+          🆕
+        </button>
+        <button
+          type="button"
+          aria-label="Toggle day or night"
+          title={dayNight === 'day' ? 'Day' : 'Night'}
+          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
+          onclick={toggleDayNight}
+        >
+          {dayNight === 'day' ? '☀️' : '🌙'}
+        </button>
       </div>
 
       {#if detailPlayer}

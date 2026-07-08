@@ -141,7 +141,7 @@
   <button
     type="button"
     aria-label="Open details for {player.name}"
-    class="pointer-events-auto absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
+    class="pointer-events-auto absolute right-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
     onclick={(e) => {
       e.stopPropagation()
       onOpenDetail()
@@ -156,7 +156,7 @@
 
   {#if opponents.length > 0}
     <div
-      class="pointer-events-none absolute bottom-2 left-2 flex flex-wrap gap-1.5 rounded-full border border-white/15 bg-black/40 p-1.5 backdrop-blur"
+      class="pointer-events-none absolute bottom-2 left-2 flex max-w-[calc(100%-3rem)] flex-wrap gap-1.5 rounded-2xl border border-white/15 bg-black/40 p-1.5 backdrop-blur"
     >
       {#each opponents as opponent (opponent.id)}
         {@const damage = player.commanderDamage[opponent.id] ?? 0}
