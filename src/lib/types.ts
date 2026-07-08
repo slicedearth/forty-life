@@ -68,12 +68,12 @@ export const LAYOUTS: Record<number, LayoutRow[]> = {
 }
 
 export const PLAYER_COLORS = [
-  '#7f1d1d',
-  '#7c2d12',
-  '#713f12',
-  '#14532d',
-  '#164e63',
-  '#1e3a8a',
-  '#4c1d95',
-  '#831843',
+  '#b91c1c', // red
+  '#c2410c', // orange
+  '#a16207', // gold
+  '#15803d', // green
+  '#0e7490', // cyan
+  '#1d4ed8', // blue
+  '#6d28d9', // violet
+  '#be185d', // pink
 ]

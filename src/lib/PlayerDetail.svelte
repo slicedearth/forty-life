@@ -6,24 +6,32 @@
     player: Player
     opponents: Player[]
     rotate: boolean
+    isMonarch: boolean
+    isInitiative: boolean
     onClose: () => void
     onLifeChange: (delta: number) => void
     onPoisonChange: (delta: number) => void
     onCommanderDamageChange: (opponentId: number, delta: number) => void
     onRename: (name: string) => void
     onCommandersChange: (cards: CommanderCard[]) => void
+    onSetMonarch: () => void
+    onSetInitiative: () => void
   }
 
   const {
     player,
     opponents,
     rotate,
+    isMonarch,
+    isInitiative,
     onClose,
     onLifeChange,
     onPoisonChange,
     onCommanderDamageChange,
     onRename,
     onCommandersChange,
+    onSetMonarch,
+    onSetInitiative,
   }: Props = $props()
 </script>
 
@@ -57,6 +65,26 @@
     </div>
 
     <section>
+      <p class="mb-2 text-sm font-medium text-gray-400">Monarch &amp; Initiative</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          class="life-btn {isMonarch ? '!border-amber-300 !bg-amber-500/20 !text-amber-300' : ''}"
+          onclick={onSetMonarch}
+        >
+          👑 {isMonarch ? 'Monarch' : 'Take'}
+        </button>
+        <button
+          type="button"
+          class="life-btn {isInitiative ? '!border-violet-300 !bg-violet-500/20 !text-violet-300' : ''}"
+          onclick={onSetInitiative}
+        >
+          🗝️ {isInitiative ? 'Initiative' : 'Take'}
+        </button>
+      </div>
+    </section>
+
+    <section>
       <p class="mb-2 text-sm font-medium text-gray-400">Commander art</p>
       <CommanderPicker value={player.commanders} onChange={onCommandersChange} />
     </section>
@@ -66,11 +94,13 @@
         <p class="text-sm font-medium text-gray-400">Life</p>
         <p class="text-2xl font-bold tabular-nums">{player.life}</p>
       </div>
-      <div class="grid grid-cols-4 gap-2">
+      <div class="grid grid-cols-3 gap-2">
+        <button type="button" class="life-btn" onclick={() => onLifeChange(-10)}>-10</button>
         <button type="button" class="life-btn" onclick={() => onLifeChange(-5)}>-5</button>
         <button type="button" class="life-btn" onclick={() => onLifeChange(-1)}>-1</button>
         <button type="button" class="life-btn" onclick={() => onLifeChange(1)}>+1</button>
         <button type="button" class="life-btn" onclick={() => onLifeChange(5)}>+5</button>
+        <button type="button" class="life-btn" onclick={() => onLifeChange(10)}>+10</button>
       </div>
     </section>
 
