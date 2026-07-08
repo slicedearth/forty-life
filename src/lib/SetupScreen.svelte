@@ -1,60 +1,65 @@
 <script lang="ts">
-  import { PLAYER_COLORS, type CommanderCard } from './types'
-  import CommanderPicker from './CommanderPicker.svelte'
+  import { PLAYER_COLORS, type CommanderCard } from "./types";
+  import CommanderPicker from "./CommanderPicker.svelte";
 
   interface PlayerConfig {
-    name: string
-    color: string
-    commanders: CommanderCard[]
+    name: string;
+    color: string;
+    commanders: CommanderCard[];
   }
 
   interface Props {
-    onStart: (players: PlayerConfig[], startingLife: number) => void
+    onStart: (players: PlayerConfig[], startingLife: number) => void;
   }
 
-  const { onStart }: Props = $props()
+  const { onStart }: Props = $props();
 
-  const playerCounts = [2, 3, 4, 5, 6]
+  const playerCounts = [2, 3, 4, 5, 6];
   const lifeTotals = [
-    { label: 'Standard', value: 20 },
-    { label: 'Commander', value: 40 },
-  ]
+    { label: "Standard", value: 20 },
+    { label: "Commander", value: 40 },
+  ];
 
-  let playerCount = $state(4)
-  let startingLife = $state(40)
-  let customLife = $state('')
+  let playerCount = $state(4);
+  let startingLife = $state(40);
+  let customLife = $state("");
 
   function defaultConfigs(count: number): PlayerConfig[] {
     return Array.from({ length: count }, (_, i) => ({
       name: `Player ${i + 1}`,
       color: PLAYER_COLORS[i % PLAYER_COLORS.length],
       commanders: [],
-    }))
+    }));
   }
 
-  let playerConfigs = $state<PlayerConfig[]>(defaultConfigs(4))
+  let playerConfigs = $state<PlayerConfig[]>(defaultConfigs(4));
 
   function setPlayerCount(count: number) {
-    playerCount = count
-    playerConfigs = Array.from({ length: count }, (_, i) => playerConfigs[i] ?? defaultConfigs(count)[i])
+    playerCount = count;
+    playerConfigs = Array.from(
+      { length: count },
+      (_, i) => playerConfigs[i] ?? defaultConfigs(count)[i],
+    );
   }
 
   function start() {
-    const life = customLife ? Number(customLife) : startingLife
-    if (!Number.isFinite(life) || life <= 0) return
+    const life = customLife ? Number(customLife) : startingLife;
+    if (!Number.isFinite(life) || life <= 0) return;
     const configs = playerConfigs.map((p, i) => ({
       name: p.name.trim() || `Player ${i + 1}`,
       color: p.color,
       commanders: p.commanders,
-    }))
-    onStart(configs, life)
+    }));
+    onStart(configs, life);
   }
 </script>
 
-<div class="flex h-full flex-col items-center justify-center gap-8 overflow-y-auto px-6 py-10 text-center">
+<div
+  class="flex h-full flex-col items-center justify-[safe_center] gap-8 overflow-y-auto px-6 py-10 text-center"
+>
   <div>
     <p class="text-sm font-semibold tracking-widest text-accent uppercase">
-      MTG Life Counter
+      Forty Life
     </p>
     <h1 class="mt-2 text-4xl font-bold text-white">Set up your game</h1>
   </div>
@@ -65,7 +70,8 @@
       {#each playerCounts as count (count)}
         <button
           type="button"
-          class="h-12 w-12 rounded-full border font-semibold transition-colors {playerCount === count
+          class="h-12 w-12 rounded-full border font-semibold transition-colors {playerCount ===
+          count
             ? 'border-accent bg-accent/20 text-accent'
             : 'border-white/15 text-gray-300 hover:border-white/30'}"
           onclick={() => setPlayerCount(count)}
@@ -82,12 +88,13 @@
       {#each lifeTotals as { label, value } (value)}
         <button
           type="button"
-          class="rounded-full border px-4 py-2 font-semibold transition-colors {startingLife === value && !customLife
+          class="rounded-full border px-4 py-2 font-semibold transition-colors {startingLife ===
+            value && !customLife
             ? 'border-accent bg-accent/20 text-accent'
             : 'border-white/15 text-gray-300 hover:border-white/30'}"
           onclick={() => {
-            startingLife = value
-            customLife = ''
+            startingLife = value;
+            customLife = "";
           }}
         >
           {label} ({value})
@@ -119,7 +126,8 @@
                 <button
                   type="button"
                   aria-label="Choose color {color}"
-                  class="h-6 w-6 rounded-full border-2 transition-transform {config.color === color
+                  class="h-6 w-6 rounded-full border-2 transition-transform {config.color ===
+                  color
                     ? 'scale-110 border-white'
                     : 'border-transparent hover:scale-105'}"
                   style:background={color}
@@ -128,7 +136,10 @@
               {/each}
             </div>
           </div>
-          <CommanderPicker value={config.commanders} onChange={cards => (config.commanders = cards)} />
+          <CommanderPicker
+            value={config.commanders}
+            onChange={(cards) => (config.commanders = cards)}
+          />
         </div>
       {/each}
     </div>

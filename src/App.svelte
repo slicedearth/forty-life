@@ -2,6 +2,7 @@
   import SetupScreen from './lib/SetupScreen.svelte'
   import PlayerCounter from './lib/PlayerCounter.svelte'
   import PlayerDetail from './lib/PlayerDetail.svelte'
+  import CommanderDamageMenu from './lib/CommanderDamageMenu.svelte'
   import { LAYOUTS, GRID_COLUMNS, type Player, type HistoryEntry, type CommanderCard } from './lib/types'
 
   const STORAGE_KEY = 'mtg-life-counter'
@@ -36,6 +37,7 @@
   let phase = $state<'setup' | 'game'>(saved && saved.players.length > 0 ? 'game' : 'setup')
   let history = $state<HistoryEntry[]>([])
   let detailPlayerId = $state<number | null>(null)
+  let damageMenuPlayerId = $state<number | null>(null)
   let monarchId = $state<number | null>(saved?.monarchId ?? null)
   let initiativeId = $state<number | null>(saved?.initiativeId ?? null)
   let dayNight = $state<'day' | 'night'>(saved?.dayNight ?? 'day')
@@ -162,9 +164,23 @@
     }
     return false
   })
+  const damageMenuPlayer = $derived(players.find(p => p.id === damageMenuPlayerId) ?? null)
+  const damageMenuRotate = $derived.by(() => {
+    if (damageMenuPlayerId === null) return false
+    let idx = 0
+    for (const row of layout) {
+      for (let i = 0; i < row.count; i++, idx++) {
+        if (players[idx]?.id === damageMenuPlayerId) return row.rotate
+      }
+    }
+    return false
+  })
 </script>
 
-<main class="h-dvh w-full overflow-hidden bg-bg">
+<main
+  class="h-dvh w-full overflow-hidden bg-bg"
+  style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)"
+>
   {#if phase === 'setup'}
     <SetupScreen onStart={startGame} />
   {:else}
@@ -189,6 +205,7 @@
                   onChange={delta => updateLife(player.id, delta)}
                   onOpenDetail={() => (detailPlayerId = player.id)}
                   onQuickDamage={(opponentId, delta) => updateCommanderDamage(player.id, opponentId, delta)}
+                  onOpenDamageMenu={() => (damageMenuPlayerId = player.id)}
                 />
               </div>
             {/if}
@@ -257,6 +274,16 @@
           onCommandersChange={cards => updateCommanders(detailPlayer.id, cards)}
           onSetMonarch={() => setMonarch(detailPlayer.id)}
           onSetInitiative={() => setInitiative(detailPlayer.id)}
+        />
+      {/if}
+
+      {#if damageMenuPlayer}
+        <CommanderDamageMenu
+          player={damageMenuPlayer}
+          opponents={players.filter(p => p.id !== damageMenuPlayer.id)}
+          rotate={damageMenuRotate}
+          onClose={() => (damageMenuPlayerId = null)}
+          onQuickDamage={(opponentId, delta) => updateCommanderDamage(damageMenuPlayer.id, opponentId, delta)}
         />
       {/if}
     </div>
