@@ -6,7 +6,10 @@ A simple, touch-friendly life counter for Magic: The Gathering, built for a sing
 
 - 2–6 player support with a seating-aware layout — players on the "far" side of the screen get their counter rotated 180° so life totals read right-side up from their seat
 - Standard (20) or Commander (40) starting life, or a custom total
-- Tap the top half of your counter to gain life, the bottom half to lose it
+- Custom player names and colors, set up before the game starts or edited anytime from a player's detail panel
+- Tap the top half of your counter to gain life, the bottom half to lose it — hold either half to rapidly change life by 5
+- Per-player poison counter and commander damage tracking (per opponent), available via the "···" button on each counter
+- Undo the last life/poison/commander-damage change
 - Game state persists to `localStorage`, so a refresh won't lose your progress
 - Reset life totals for a rematch, or start a new game with different players/settings
 
