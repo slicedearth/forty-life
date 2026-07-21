@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Forty Life">
+  <rect width="512" height="512" fill="#08090c" />
+  <path d="M48 256A208 208 0 0 1 256 48" fill="none" stroke="#dc3c32" stroke-width="22" />
+  <path d="M256 48a208 208 0 0 1 208 208" fill="none" stroke="#d97728" stroke-width="22" />
+  <path d="M464 256a208 208 0 0 1-208 208" fill="none" stroke="#2f9953" stroke-width="22" />
+  <path d="M256 464A208 208 0 0 1 48 256" fill="none" stroke="#3374dc" stroke-width="22" />
+  <circle cx="256" cy="256" r="166" fill="#12151a" stroke="#55c1e0" stroke-width="5" />
+  <text
+    x="256"
+    y="286"
+    fill="#f8fafc"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="190"
+    font-weight="800"
+    text-anchor="middle"
+  >40</text>
+  <text
+    x="256"
+    y="352"
+    fill="#55c1e0"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="42"
+    font-weight="700"
+    text-anchor="middle"
+  >LIFE</text>
+</svg>

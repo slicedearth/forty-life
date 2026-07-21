@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "Forty Life - MTG Life Counter",
+  "short_name": "Forty Life",
+  "description": "A fast, touch-friendly Magic: The Gathering life counter for a shared table.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08090c",
+  "theme_color": "#08090c",
+  "categories": ["games", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -60,6 +60,8 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 
 - Tested down to a 375px-wide screen and sideways (landscape) layouts, where tiles are short and wide instead of tall and narrow
 - Respects notches and home indicators via `env(safe-area-inset-*)`
+- Installs as a standalone Progressive Web App on modern mobile platforms with a dedicated home-screen icon
+- Precaches the application shell for offline games after the first successful load; new Scryfall searches and uncached artwork still require a connection
 - Requests a screen wake lock while a game is active where the browser supports it, so the shared display does not sleep mid-turn
 - Every tap target stays reachable and non-overlapping regardless of player count, screen size, or orientation
 
@@ -107,6 +109,10 @@ src/
     ├── CommanderPicker.svelte     # Scryfall search + Partner/Background pairing UI
     ├── scryfall.ts                # Scryfall API client and partner-mode detection
     └── types.ts                   # Shared types, layouts, and the color palette
+public/
+├── icons/                      # Favicon, install icons, and Apple touch icon
+├── manifest.webmanifest        # PWA identity and standalone display metadata
+└── sw.js                       # Offline app-shell cache and navigation fallback
 ```
 
 ## Built with
@@ -117,6 +123,7 @@ src/
 - [TypeScript](https://www.typescriptlang.org/) — throughout
 - [Lucide](https://lucide.dev/) — consistent, accessible interface icons
 - [Scryfall API](https://scryfall.com/docs/api) — commander search and card art, called directly from the client
+- Web App Manifest and Service Worker — dependency-free installation and offline app-shell support
 
 ## License
 
