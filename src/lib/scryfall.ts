@@ -49,7 +49,8 @@ async function searchCards(query: string): Promise<CommanderCard[]> {
   const res = await fetch(
     `${API_BASE}/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
   )
-  if (!res.ok) return []
+  if (res.status === 404) return []
+  if (!res.ok) throw new Error(`Scryfall search failed with status ${res.status}`)
   const data = (await res.json()) as { data?: ScryfallCard[] }
   return (data.data ?? []).map(toCommanderCard).filter((c): c is CommanderCard => c !== null)
 }
@@ -95,7 +96,8 @@ export async function searchSecondaryCommander(kind: SecondarySearchKind, query:
 
 export async function fetchCardByExactName(name: string): Promise<CommanderCard | null> {
   const res = await fetch(`${API_BASE}/cards/named?exact=${encodeURIComponent(name)}`)
-  if (!res.ok) return null
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Scryfall card lookup failed with status ${res.status}`)
   const card = (await res.json()) as ScryfallCard
   return toCommanderCard(card)
 }

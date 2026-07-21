@@ -105,6 +105,7 @@
   const worstCommanderDamage = $derived(
     Math.max(0, ...Object.values(player.commanderDamage))
   )
+  const highestCommanderTax = $derived(Math.max(0, ...(player.commanderTax ?? [0])))
   const isLethal = $derived(player.life <= 0 || player.poison >= 10 || worstCommanderDamage >= 21)
 
   const lifeDigits = $derived(player.life.toString().replace('-', '').length)
@@ -158,7 +159,9 @@
 
   <button
     type="button"
-    aria-label="Open details for {player.name}"
+    aria-label="Open details for {player.name}{highestCommanderTax > 0
+      ? `, highest commander tax ${highestCommanderTax}`
+      : ''}"
     class="icon-tool pointer-events-auto absolute right-2 bottom-2"
     onclick={(e) => {
       e.stopPropagation()
@@ -166,6 +169,14 @@
     }}
   >
     <MoreHorizontal size={17} strokeWidth={2.25} />
+    {#if highestCommanderTax > 0}
+      <span
+        class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-700 px-0.5 text-[9px] font-bold text-white shadow-sm"
+        title="Highest commander tax"
+      >
+        +{highestCommanderTax}
+      </span>
+    {/if}
   </button>
 
   {#if opponents.length > 0}
@@ -179,7 +190,7 @@
           type="button"
           aria-label="Deal commander damage from {opponent.name}"
           class="pointer-events-auto relative flex h-8 w-8 flex-shrink-0 touch-none items-center justify-center overflow-hidden rounded-full border-2 border-white/80 bg-cover bg-center text-xs font-bold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
-          style:background-color={thumbnail ? undefined : opponent.color}
+          style:background-color={opponent.color}
           style:background-image={thumbnail ? `url('${thumbnail}')` : undefined}
           onpointerdown={(e) => {
             e.stopPropagation()

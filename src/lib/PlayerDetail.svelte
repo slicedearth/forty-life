@@ -13,6 +13,7 @@
     onLifeChange: (delta: number) => void
     onPoisonChange: (delta: number) => void
     onCommanderDamageChange: (opponentId: number, delta: number) => void
+    onCommanderTaxChange: (commanderIndex: number, delta: number) => void
     onRename: (name: string) => void
     onCommandersChange: (cards: CommanderCard[]) => void
     onSetMonarch: () => void
@@ -29,6 +30,7 @@
     onLifeChange,
     onPoisonChange,
     onCommanderDamageChange,
+    onCommanderTaxChange,
     onRename,
     onCommandersChange,
     onSetMonarch,
@@ -91,6 +93,42 @@
     </section>
 
     <section class="border-t border-white/10 pt-4">
+      <p class="mb-2 text-sm font-medium text-gray-400">Commander tax</p>
+      <div class="flex flex-col gap-2">
+        {#each { length: Math.max(1, player.commanders.length) } as _, commanderIndex (commanderIndex)}
+          {@const commander = player.commanders[commanderIndex]}
+          {@const tax = player.commanderTax[commanderIndex] ?? 0}
+          <div class="grid grid-cols-[2.25rem_minmax(0,1fr)_2.5rem_2.5rem_2.5rem] items-center gap-2 rounded-lg border border-white/10 px-2 py-1.5">
+            <span
+              class="h-9 w-9 rounded-full border border-white/25 bg-cover bg-center"
+              style:background-color={player.color}
+              style:background-image={commander?.imageUrl ? `url('${commander.imageUrl}')` : undefined}
+            ></span>
+            <span class="min-w-0 truncate text-sm font-medium">{commander?.name ?? 'Commander'}</span>
+            <button
+              type="button"
+              class="life-btn !h-10 !w-10 !p-0"
+              aria-label="Reduce commander tax for {commander?.name ?? player.name} by two"
+              onclick={() => onCommanderTaxChange(commanderIndex, -2)}
+              disabled={tax === 0}
+            >
+              -2
+            </button>
+            <span class="text-center text-lg font-bold text-cyan-200 tabular-nums">+{tax}</span>
+            <button
+              type="button"
+              class="life-btn !h-10 !w-10 !p-0"
+              aria-label="Increase commander tax for {commander?.name ?? player.name} by two"
+              onclick={() => onCommanderTaxChange(commanderIndex, 2)}
+            >
+              +2
+            </button>
+          </div>
+        {/each}
+      </div>
+    </section>
+
+    <section class="border-t border-white/10 pt-4">
       <div class="mb-2 flex items-center justify-between">
         <p class="text-sm font-medium text-gray-400">Life</p>
         <p class="text-2xl font-bold tabular-nums">{player.life}</p>
@@ -127,7 +165,7 @@
             <div class="flex items-center gap-2 rounded-lg border border-white/10 px-2 py-1.5">
               <span
                 class="h-8 w-8 flex-shrink-0 rounded-full border border-white/25 bg-cover bg-center"
-                style:background-color={opponent.commanders?.[0]?.imageUrl ? undefined : opponent.color}
+                style:background-color={opponent.color}
                 style:background-image={opponent.commanders?.[0]?.imageUrl
                   ? `url('${opponent.commanders[0].imageUrl}')`
                   : undefined}
@@ -176,5 +214,8 @@
   }
   .life-btn:active {
     background: rgba(255, 255, 255, 0.1);
+  }
+  .life-btn:disabled {
+    opacity: 0.3;
   }
 </style>

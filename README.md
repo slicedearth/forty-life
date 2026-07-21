@@ -44,12 +44,14 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 - Search [Scryfall](https://scryfall.com/) for a commander — results are limited to cards that are actually legal to be your commander
 - The card's art becomes that player's counter background automatically
 - **Partner**, **Partner with**, **Choose a Background**, **Friends forever**, and **Doctor's companion / Time Lord Doctor** pairings are all detected from the card's own rules text — pick a second commander and its art splits alongside the first
+- Empty searches and connection failures are shown separately, while unavailable artwork falls back to the player's assigned color
 - No commander selected? The counter falls back to a color picked from a curated, high-contrast palette
 
 ### ☠️ Everything else a Commander pod needs
 
 - **Poison counters**, tracked per player (10 is lethal)
 - **Commander damage**, tracked per opponent (21 from one opponent is lethal) — on wide screens, tap a small portrait of the attacker to log damage in place; on narrow phones, a single "⚔" button opens a full menu instead so nothing gets cramped
+- **Commander tax**, tracked in two-mana steps for each commander independently, including Partner pairs
 - **The Monarch** and **the Initiative**, each toggled from a player's detail panel with a passive crown/key badge showing who currently holds it
 - **Day/Night**, a one-tap toggle that washes the whole screen in a cool blue tint — handy for werewolf decks, visible at a glance from across the table
 - **Lethal-state emphasis** highlights a counter when life reaches 0, poison reaches 10, or commander damage reaches 21
@@ -63,8 +65,9 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 
 ### ↩️ Forgiving by default
 
-- Undo reverts the last life, poison, or commander-damage change
+- Undo reverts the last life, poison, commander-damage, or commander-tax change
 - Reset Life restores everyone to their starting total for a rematch without leaving the game
+- Reset and New Game use clear in-app confirmation dialogs instead of browser prompts
 - Game state — life totals, colors, commanders, monarch/initiative, day/night — persists to `localStorage`, so an accidental refresh never loses the game
 
 ## Getting started
@@ -100,6 +103,7 @@ src/
     ├── PlayerCounter.svelte       # A single player's tile: tap zones, badges, quick actions
     ├── PlayerDetail.svelte        # Full per-player panel: rename, life, poison, commander damage
     ├── CommanderDamageMenu.svelte # Narrow-screen menu for assigning commander damage
+    ├── ConfirmDialog.svelte       # Responsive reset and new-game confirmations
     ├── CommanderPicker.svelte     # Scryfall search + Partner/Background pairing UI
     ├── scryfall.ts                # Scryfall API client and partner-mode detection
     └── types.ts                   # Shared types, layouts, and the color palette

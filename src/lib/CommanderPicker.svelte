@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LoaderCircle, X } from '@lucide/svelte'
+  import { CircleAlert, LoaderCircle, SearchX, X } from '@lucide/svelte'
   import type { CommanderCard, PartnerMode } from './types'
   import {
     searchCommanders,
@@ -15,6 +15,8 @@
   }
 
   const { value, onChange }: Props = $props()
+
+  type SearchStatus = 'idle' | 'empty' | 'error'
 
   const PARTNER_LABELS: Record<Exclude<PartnerMode, null>, string> = {
     partner: 'Partner',
@@ -36,12 +38,14 @@
   let primaryQuery = $state('')
   let primarySuggestions = $state<CommanderCard[]>([])
   let primaryLoading = $state(false)
+  let primaryStatus = $state<SearchStatus>('idle')
   let primaryDebounce: ReturnType<typeof setTimeout>
   let primaryRequest = 0
 
   let secondaryQuery = $state('')
   let secondarySuggestions = $state<CommanderCard[]>([])
   let secondaryLoading = $state(false)
+  let secondaryStatus = $state<SearchStatus>('idle')
   let secondaryDebounce: ReturnType<typeof setTimeout>
   let secondaryRequest = 0
 
@@ -49,14 +53,21 @@
   const secondary = $derived(value[1] ?? null)
   const secondaryKind = $derived(secondaryKindFor(primary?.partnerMode ?? null))
 
+  function hideBrokenImage(event: Event) {
+    ;(event.currentTarget as HTMLImageElement).hidden = true
+  }
+
   $effect(() => {
     primaryQuery = value[0]?.name ?? ''
     secondaryQuery = value[1]?.name ?? ''
+    primaryStatus = 'idle'
+    secondaryStatus = 'idle'
   })
 
   function onPrimaryInput() {
     clearTimeout(primaryDebounce)
     const request = ++primaryRequest
+    primaryStatus = 'idle'
     if (!primaryQuery.trim()) {
       primarySuggestions = []
       primaryLoading = false
@@ -64,25 +75,46 @@
     }
     primaryLoading = true
     primaryDebounce = setTimeout(async () => {
-      const results = await searchCommanders(primaryQuery)
-      if (request !== primaryRequest) return
-      primarySuggestions = results
-      primaryLoading = false
+      try {
+        const results = await searchCommanders(primaryQuery)
+        if (request !== primaryRequest) return
+        primarySuggestions = results
+        primaryStatus = results.length > 0 ? 'idle' : 'empty'
+      } catch {
+        if (request !== primaryRequest) return
+        primarySuggestions = []
+        primaryStatus = 'error'
+      } finally {
+        if (request === primaryRequest) primaryLoading = false
+      }
     }, 300)
   }
 
   async function pickPrimary(card: CommanderCard) {
     primaryQuery = card.name
+    primaryRequest++
     primarySuggestions = []
+    primaryStatus = 'idle'
     secondaryQuery = ''
     secondarySuggestions = []
+    secondaryStatus = 'idle'
 
     if (card.partnerMode === 'partner-with' && card.partnerWithName) {
+      const request = ++secondaryRequest
       secondaryLoading = true
-      const partner = await fetchCardByExactName(card.partnerWithName)
-      secondaryLoading = false
-      secondaryQuery = partner?.name ?? ''
-      onChange(partner ? [card, partner] : [card])
+      try {
+        const partner = await fetchCardByExactName(card.partnerWithName)
+        if (request !== secondaryRequest) return
+        secondaryQuery = partner?.name ?? ''
+        secondaryStatus = partner ? 'idle' : 'empty'
+        onChange(partner ? [card, partner] : [card])
+      } catch {
+        if (request !== secondaryRequest) return
+        secondaryStatus = 'error'
+        onChange([card])
+      } finally {
+        if (request === secondaryRequest) secondaryLoading = false
+      }
     } else {
       onChange([card])
     }
@@ -93,14 +125,18 @@
     primaryRequest++
     primaryLoading = false
     primarySuggestions = []
+    primaryStatus = 'idle'
     secondaryQuery = ''
     secondarySuggestions = []
+    secondaryStatus = 'idle'
+    secondaryRequest++
     onChange([])
   }
 
   function onSecondaryInput() {
     clearTimeout(secondaryDebounce)
     const request = ++secondaryRequest
+    secondaryStatus = 'idle'
     if (!secondaryQuery.trim() || !secondaryKind) {
       secondarySuggestions = []
       secondaryLoading = false
@@ -109,16 +145,26 @@
     const kind = secondaryKind
     secondaryLoading = true
     secondaryDebounce = setTimeout(async () => {
-      const results = await searchSecondaryCommander(kind, secondaryQuery)
-      if (request !== secondaryRequest) return
-      secondarySuggestions = results
-      secondaryLoading = false
+      try {
+        const results = await searchSecondaryCommander(kind, secondaryQuery)
+        if (request !== secondaryRequest) return
+        secondarySuggestions = results
+        secondaryStatus = results.length > 0 ? 'idle' : 'empty'
+      } catch {
+        if (request !== secondaryRequest) return
+        secondarySuggestions = []
+        secondaryStatus = 'error'
+      } finally {
+        if (request === secondaryRequest) secondaryLoading = false
+      }
     }, 300)
   }
 
   function pickSecondary(card: CommanderCard) {
     secondaryQuery = card.name
+    secondaryRequest++
     secondarySuggestions = []
+    secondaryStatus = 'idle'
     if (primary) onChange([primary, card])
   }
 
@@ -127,6 +173,7 @@
     secondaryRequest++
     secondaryLoading = false
     secondarySuggestions = []
+    secondaryStatus = 'idle'
     if (primary) onChange([primary])
   }
 </script>
@@ -135,7 +182,12 @@
   <div class="relative">
     <div class="flex items-center gap-2">
       {#if primary}
-        <img src={primary.imageUrl} alt="" class="h-10 w-10 flex-shrink-0 rounded-md object-cover" />
+        <img
+          src={primary.imageUrl}
+          alt=""
+          class="h-10 w-10 flex-shrink-0 rounded-md object-cover"
+          onerror={hideBrokenImage}
+        />
       {/if}
       <input
         type="text"
@@ -179,6 +231,14 @@
           </li>
         {/each}
       </ul>
+    {:else if primaryStatus === 'empty'}
+      <p class="search-status text-white/45" role="status">
+        <SearchX size={14} strokeWidth={2.25} /> No valid commanders found
+      </p>
+    {:else if primaryStatus === 'error'}
+      <p class="search-status text-red-300" role="alert">
+        <CircleAlert size={14} strokeWidth={2.25} /> Scryfall is unavailable. Try again.
+      </p>
     {/if}
   </div>
 
@@ -187,18 +247,36 @@
       {#if secondaryLoading}
         Loading partner…
       {:else if secondary}
-        <img src={secondary.imageUrl} alt="" class="h-7 w-7 flex-shrink-0 rounded object-cover" />
+        <img
+          src={secondary.imageUrl}
+          alt=""
+          class="h-7 w-7 flex-shrink-0 rounded object-cover"
+          onerror={hideBrokenImage}
+        />
         <span class="min-w-0 flex-1 truncate">Partners with {secondary.name}</span>
         <button type="button" aria-label="Remove partner" class="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 hover:bg-white/10 hover:text-white" onclick={clearSecondary}>
           <X size={14} strokeWidth={2.25} />
         </button>
+      {:else if secondaryStatus === 'empty'}
+        <span class="flex items-center gap-1.5 text-white/45" role="status">
+          <SearchX size={13} strokeWidth={2.25} /> Paired commander not found
+        </span>
+      {:else if secondaryStatus === 'error'}
+        <span class="flex items-center gap-1.5 text-red-300" role="alert">
+          <CircleAlert size={13} strokeWidth={2.25} /> Paired commander unavailable
+        </span>
       {/if}
     </div>
   {:else if secondaryKind}
     <div class="relative pl-2">
       <div class="flex items-center gap-2">
         {#if secondary}
-          <img src={secondary.imageUrl} alt="" class="h-9 w-9 flex-shrink-0 rounded-md object-cover" />
+          <img
+            src={secondary.imageUrl}
+            alt=""
+            class="h-9 w-9 flex-shrink-0 rounded-md object-cover"
+            onerror={hideBrokenImage}
+          />
         {/if}
         <input
           type="text"
@@ -235,7 +313,26 @@
             </li>
           {/each}
         </ul>
+      {:else if secondaryStatus === 'empty'}
+        <p class="search-status pl-2 text-white/45" role="status">
+          <SearchX size={14} strokeWidth={2.25} /> No compatible commanders found
+        </p>
+      {:else if secondaryStatus === 'error'}
+        <p class="search-status pl-2 text-red-300" role="alert">
+          <CircleAlert size={14} strokeWidth={2.25} /> Scryfall is unavailable. Try again.
+        </p>
       {/if}
     </div>
   {/if}
 </div>
+
+<style>
+  .search-status {
+    display: flex;
+    min-height: 1.75rem;
+    align-items: center;
+    gap: 0.35rem;
+    padding-top: 0.35rem;
+    font-size: 0.75rem;
+  }
+</style>

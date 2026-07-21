@@ -22,6 +22,8 @@ export interface Player {
   life: number
   color: string
   poison: number
+  /** Additional mana owed when casting each commander from the command zone. */
+  commanderTax: number[]
   /** Damage taken from each opponent, keyed by opponent id. 21+ from one opponent is lethal. */
   commanderDamage: Record<number, number>
   /** Scryfall art for this player's commander(s), shown as their counter background. 0, 1, or 2 entries. */
@@ -37,6 +39,7 @@ export type HistoryEntry =
   | { type: 'life'; playerId: number; delta: number }
   | { type: 'poison'; playerId: number; delta: number }
   | { type: 'commanderDamage'; playerId: number; opponentId: number; delta: number }
+  | { type: 'commanderTax'; playerId: number; commanderIndex: number; delta: number }
 
 /**
  * Each row's player count must divide evenly into GRID_COLUMNS (6) so every

@@ -53,7 +53,7 @@
         <div class="grid grid-cols-[auto_minmax(0,1fr)_2.5rem_2.5rem_2.5rem] items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5">
           <span
             class="h-9 w-9 flex-shrink-0 rounded-full border border-white/30 bg-cover bg-center"
-            style:background-color={thumbnail ? undefined : opponent.color}
+            style:background-color={opponent.color}
             style:background-image={thumbnail ? `url('${thumbnail}')` : undefined}
           ></span>
           <span class="min-w-0 flex-1 truncate text-sm font-medium text-white">{opponent.name}</span>

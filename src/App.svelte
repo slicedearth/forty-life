@@ -5,6 +5,7 @@
   import PlayerCounter from './lib/PlayerCounter.svelte'
   import PlayerDetail from './lib/PlayerDetail.svelte'
   import CommanderDamageMenu from './lib/CommanderDamageMenu.svelte'
+  import ConfirmDialog from './lib/ConfirmDialog.svelte'
   import { LAYOUTS, GRID_COLUMNS, type Player, type HistoryEntry, type CommanderCard } from './lib/types'
 
   const STORAGE_KEY = 'mtg-life-counter'
@@ -22,11 +23,29 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return null
-      const parsed = JSON.parse(raw) as SavedState
+      const parsed = JSON.parse(raw) as Partial<SavedState>
+      if (!Array.isArray(parsed.players)) return null
       const valid = parsed.players.every(
         p => typeof p.color === 'string' && typeof p.poison === 'number' && p.commanderDamage
       )
-      return valid ? parsed : null
+      if (!valid) return null
+
+      const players = parsed.players.map(player => {
+        const commanders = Array.isArray(player.commanders) ? player.commanders : []
+        const savedTax = Array.isArray(player.commanderTax) ? player.commanderTax : []
+        const commanderTax = Array.from({ length: Math.max(1, commanders.length) }, (_, index) =>
+          Math.max(0, Number(savedTax[index]) || 0)
+        )
+        return { ...player, commanders, commanderTax }
+      })
+
+      return {
+        players,
+        startingLife: typeof parsed.startingLife === 'number' ? parsed.startingLife : 40,
+        monarchId: typeof parsed.monarchId === 'number' ? parsed.monarchId : null,
+        initiativeId: typeof parsed.initiativeId === 'number' ? parsed.initiativeId : null,
+        dayNight: parsed.dayNight === 'night' ? 'night' : 'day',
+      }
     } catch {
       return null
     }
@@ -40,6 +59,7 @@
   let history = $state<HistoryEntry[]>([])
   let detailPlayerId = $state<number | null>(null)
   let damageMenuPlayerId = $state<number | null>(null)
+  let pendingAction = $state<'reset' | 'new' | null>(null)
   let monarchId = $state<number | null>(saved?.monarchId ?? null)
   let initiativeId = $state<number | null>(saved?.initiativeId ?? null)
   let dayNight = $state<'day' | 'night'>(saved?.dayNight ?? 'day')
@@ -86,6 +106,7 @@
       color: config.color,
       life,
       poison: 0,
+      commanderTax: Array(Math.max(1, config.commanders.length)).fill(0),
       commanderDamage: {},
       commanders: config.commanders,
     }))
@@ -123,12 +144,36 @@
     pushHistory({ type: 'commanderDamage', playerId: id, opponentId, delta })
   }
 
+  function updateCommanderTax(id: number, commanderIndex: number, delta: number) {
+    let appliedDelta = 0
+    players = players.map(p => {
+      if (p.id !== id) return p
+      const commanderTax = [...p.commanderTax]
+      while (commanderTax.length <= commanderIndex) commanderTax.push(0)
+      const current = commanderTax[commanderIndex] ?? 0
+      const next = Math.max(0, current + delta)
+      appliedDelta = next - current
+      commanderTax[commanderIndex] = next
+      return { ...p, commanderTax }
+    })
+    if (appliedDelta !== 0) {
+      pushHistory({ type: 'commanderTax', playerId: id, commanderIndex, delta: appliedDelta })
+    }
+  }
+
   function renamePlayer(id: number, name: string) {
     players = players.map(p => (p.id === id ? { ...p, name } : p))
   }
 
   function updateCommanders(id: number, commanders: CommanderCard[]) {
-    players = players.map(p => (p.id === id ? { ...p, commanders } : p))
+    players = players.map(p => {
+      if (p.id !== id) return p
+      const commanderTax = Array.from(
+        { length: Math.max(1, commanders.length) },
+        (_, index) => p.commanderTax[index] ?? 0
+      )
+      return { ...p, commanders, commanderTax }
+    })
   }
 
   function setMonarch(id: number) {
@@ -153,19 +198,32 @@
       players = players.map(p =>
         p.id === entry.playerId ? { ...p, poison: Math.max(0, p.poison - entry.delta) } : p
       )
-    } else {
+    } else if (entry.type === 'commanderDamage') {
       players = players.map(p => {
         if (p.id !== entry.playerId) return p
         const current = p.commanderDamage[entry.opponentId] ?? 0
         const next = Math.max(0, current - entry.delta)
         return { ...p, commanderDamage: { ...p.commanderDamage, [entry.opponentId]: next } }
       })
+    } else {
+      players = players.map(p => {
+        if (p.id !== entry.playerId) return p
+        const commanderTax = [...p.commanderTax]
+        const current = commanderTax[entry.commanderIndex] ?? 0
+        commanderTax[entry.commanderIndex] = Math.max(0, current - entry.delta)
+        return { ...p, commanderTax }
+      })
     }
   }
 
-  function resetLife() {
-    if (!confirm('Reset everyone back to starting life?')) return
-    players = players.map(p => ({ ...p, life: startingLife, poison: 0, commanderDamage: {} }))
+  function resetGame() {
+    players = players.map(p => ({
+      ...p,
+      life: startingLife,
+      poison: 0,
+      commanderDamage: {},
+      commanderTax: p.commanderTax.map(() => 0),
+    }))
     history = []
     monarchId = null
     initiativeId = null
@@ -173,7 +231,6 @@
   }
 
   function newGame() {
-    if (!confirm('End this game and set up a new one?')) return
     localStorage.removeItem(STORAGE_KEY)
     players = []
     history = []
@@ -266,10 +323,22 @@
           >
             <Undo2 size={17} strokeWidth={2.25} />
           </button>
-          <button type="button" aria-label="Reset life" title="Reset life" class="game-tool" onclick={resetLife}>
+          <button
+            type="button"
+            aria-label="Reset life"
+            title="Reset life"
+            class="game-tool"
+            onclick={() => (pendingAction = 'reset')}
+          >
             <RotateCcw size={17} strokeWidth={2.25} />
           </button>
-          <button type="button" aria-label="New game" title="New game" class="game-tool" onclick={newGame}>
+          <button
+            type="button"
+            aria-label="New game"
+            title="New game"
+            class="game-tool"
+            onclick={() => (pendingAction = 'new')}
+          >
             <FilePlus2 size={17} strokeWidth={2.25} />
           </button>
           <span class="mx-1 h-5 w-px bg-white/15" aria-hidden="true"></span>
@@ -302,6 +371,8 @@
           onPoisonChange={delta => updatePoison(detailPlayer.id, delta)}
           onCommanderDamageChange={(opponentId, delta) =>
             updateCommanderDamage(detailPlayer.id, opponentId, delta)}
+          onCommanderTaxChange={(commanderIndex, delta) =>
+            updateCommanderTax(detailPlayer.id, commanderIndex, delta)}
           onRename={name => renamePlayer(detailPlayer.id, name)}
           onCommandersChange={cards => updateCommanders(detailPlayer.id, cards)}
           onSetMonarch={() => setMonarch(detailPlayer.id)}
@@ -316,6 +387,31 @@
           rotate={damageMenuRotate}
           onClose={() => (damageMenuPlayerId = null)}
           onQuickDamage={(opponentId, delta) => updateCommanderDamage(damageMenuPlayer.id, opponentId, delta)}
+        />
+      {/if}
+
+      {#if pendingAction === 'reset'}
+        <ConfirmDialog
+          title="Reset this game?"
+          message="Return every player to {startingLife} life and clear counters, commander damage, commander tax, roles, and day/night."
+          confirmLabel="Reset game"
+          onCancel={() => (pendingAction = null)}
+          onConfirm={() => {
+            pendingAction = null
+            resetGame()
+          }}
+        />
+      {:else if pendingAction === 'new'}
+        <ConfirmDialog
+          title="Start a new game?"
+          message="End this game and return to setup. The current game state will be cleared."
+          confirmLabel="New game"
+          destructive
+          onCancel={() => (pendingAction = null)}
+          onConfirm={() => {
+            pendingAction = null
+            newGame()
+          }}
         />
       {/if}
     </div>
