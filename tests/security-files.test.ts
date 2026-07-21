@@ -25,4 +25,15 @@ describe('deployed security boundaries', () => {
     expect(worker).toContain('caches.match(request, { ignoreVary: true })')
     expect(worker).toContain("response.headers.get('content-type')?.includes('text/html')")
   })
+
+  it('keeps dependency automation bounded and avoids duplicate branch CI', () => {
+    const workflow = readProjectFile('.github/workflows/ci.yml')
+    const dependabot = readProjectFile('.github/dependabot.yml')
+
+    expect(workflow).toContain('push:\n    branches:\n      - main')
+    expect(dependabot).toContain('routine-npm-updates:')
+    expect(dependabot).toContain('routine-action-updates:')
+    expect(dependabot).toContain('dependency-name: typescript')
+    expect(dependabot).toContain('dependency-name: "@types/node"')
+  })
 })
