@@ -1,6 +1,11 @@
 import type { CommanderCard, PartnerMode } from './types'
+import { normalizeScryfallImageUrl } from './security'
 
 const API_BASE = 'https://api.scryfall.com'
+const REQUEST_TIMEOUT_MS = 8_000
+const MAX_RESULTS = 12
+const MAX_CACHE_ENTRIES = 40
+const responseCache = new Map<string, CommanderCard[]>()
 
 interface ScryfallCard {
   name: string
@@ -12,7 +17,9 @@ interface ScryfallCard {
 }
 
 function extractImage(card: ScryfallCard): string | null {
-  return card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.art_crop ?? null
+  return normalizeScryfallImageUrl(
+    card.image_uris?.art_crop ?? card.card_faces?.[0]?.image_uris?.art_crop
+  )
 }
 
 function extractOracleText(card: ScryfallCard): string {
@@ -40,24 +47,66 @@ function detectPartnering(card: ScryfallCard): { partnerMode: PartnerMode; partn
 
 function toCommanderCard(card: ScryfallCard): CommanderCard | null {
   const imageUrl = extractImage(card)
-  if (!imageUrl) return null
+  if (!imageUrl || typeof card.name !== 'string' || !card.name.trim()) return null
   const { partnerMode, partnerWithName } = detectPartnering(card)
-  return { name: card.name, imageUrl, partnerMode, partnerWithName }
+  return { name: card.name.slice(0, 200), imageUrl, partnerMode, partnerWithName }
 }
 
-async function searchCards(query: string): Promise<CommanderCard[]> {
-  const res = await fetch(
-    `${API_BASE}/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
-  )
+function parseCard(value: unknown): ScryfallCard | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const card = value as Record<string, unknown>
+  if (typeof card.name !== 'string') return null
+  return card as unknown as ScryfallCard
+}
+
+async function fetchWithTimeout(url: string, signal?: AbortSignal): Promise<Response> {
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  if (signal?.aborted) abort()
+  signal?.addEventListener('abort', abort, { once: true })
+  const timeout = setTimeout(abort, REQUEST_TIMEOUT_MS)
+
+  try {
+    return await fetch(url, { signal: controller.signal })
+  } finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener('abort', abort)
+  }
+}
+
+function cacheResults(key: string, results: CommanderCard[]): void {
+  if (responseCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = responseCache.keys().next().value
+    if (oldestKey) responseCache.delete(oldestKey)
+  }
+  responseCache.set(key, results)
+}
+
+async function searchCards(query: string, signal?: AbortSignal): Promise<CommanderCard[]> {
+  const url = `${API_BASE}/cards/search?q=${encodeURIComponent(query)}&unique=cards&order=name`
+  const cached = responseCache.get(url)
+  if (cached) return cached
+
+  const res = await fetchWithTimeout(url, signal)
   if (res.status === 404) return []
   if (!res.ok) throw new Error(`Scryfall search failed with status ${res.status}`)
-  const data = (await res.json()) as { data?: ScryfallCard[] }
-  return (data.data ?? []).map(toCommanderCard).filter((c): c is CommanderCard => c !== null)
+  const payload: unknown = await res.json()
+  if (typeof payload !== 'object' || payload === null || !('data' in payload) || !Array.isArray(payload.data)) {
+    throw new Error('Scryfall returned an invalid search response')
+  }
+  const results = payload.data
+    .slice(0, MAX_RESULTS)
+    .map(parseCard)
+    .filter((card): card is ScryfallCard => card !== null)
+    .map(toCommanderCard)
+    .filter((card): card is CommanderCard => card !== null)
+  cacheResults(url, results)
+  return results
 }
 
-export async function searchCommanders(query: string): Promise<CommanderCard[]> {
+export async function searchCommanders(query: string, signal?: AbortSignal): Promise<CommanderCard[]> {
   const trimmed = query.trim()
-  return trimmed ? searchCards(`is:commander ${trimmed}`) : []
+  return trimmed ? searchCards(`is:commander ${trimmed}`, signal) : []
 }
 
 /** What kind of card a player's second commander slot should search for, based on the first commander's ability. */
@@ -88,16 +137,25 @@ export function secondaryKindFor(partnerMode: PartnerMode): SecondarySearchKind 
   }
 }
 
-export async function searchSecondaryCommander(kind: SecondarySearchKind, query: string): Promise<CommanderCard[]> {
+export async function searchSecondaryCommander(
+  kind: SecondarySearchKind,
+  query: string,
+  signal?: AbortSignal
+): Promise<CommanderCard[]> {
   const trimmed = query.trim()
   if (!trimmed) return []
-  return searchCards(`${SECONDARY_FILTERS[kind]} ${trimmed}`)
+  return searchCards(`${SECONDARY_FILTERS[kind]} ${trimmed}`, signal)
 }
 
-export async function fetchCardByExactName(name: string): Promise<CommanderCard | null> {
-  const res = await fetch(`${API_BASE}/cards/named?exact=${encodeURIComponent(name)}`)
+export async function fetchCardByExactName(name: string, signal?: AbortSignal): Promise<CommanderCard | null> {
+  const res = await fetchWithTimeout(`${API_BASE}/cards/named?exact=${encodeURIComponent(name)}`, signal)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Scryfall card lookup failed with status ${res.status}`)
-  const card = (await res.json()) as ScryfallCard
+  const card = parseCard(await res.json())
+  if (!card) throw new Error('Scryfall returned an invalid card response')
   return toCommanderCard(card)
+}
+
+export function clearScryfallCache(): void {
+  responseCache.clear()
 }

@@ -132,6 +132,7 @@
             </span>
             <input
               type="text"
+              maxlength="40"
               bind:value={config.name}
               placeholder="Player {i + 1}"
               aria-label="Player {i + 1} name"

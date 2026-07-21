@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Crown, KeyRound, Minus, MoreHorizontal, Plus, Skull, Swords } from '@lucide/svelte'
+  import { isPlayerLethal } from './game'
   import type { Player } from './types'
 
   interface Props {
@@ -106,7 +107,7 @@
     Math.max(0, ...Object.values(player.commanderDamage))
   )
   const highestCommanderTax = $derived(Math.max(0, ...(player.commanderTax ?? [0])))
-  const isLethal = $derived(player.life <= 0 || player.poison >= 10 || worstCommanderDamage >= 21)
+  const isLethal = $derived(isPlayerLethal(player))
 
   const lifeDigits = $derived(player.life.toString().replace('-', '').length)
   const lifeFontSize = $derived(
@@ -118,6 +119,7 @@
 </script>
 
 <div
+  data-player-id={player.id}
   class="player-counter relative flex h-full w-full flex-row overflow-hidden border-4"
   class:is-lethal={isLethal}
   style:background={player.color}

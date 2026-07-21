@@ -125,6 +125,26 @@ public/
 - [Scryfall API](https://scryfall.com/docs/api) — commander search and card art, called directly from the client
 - Web App Manifest and Service Worker — dependency-free installation and offline app-shell support
 
+## Testing
+
+The automated suite is deliberately network-independent: Scryfall responses are mocked and no live card API calls are made during routine verification.
+
+```bash
+npm test               # Unit, persistence, API-boundary, and security tests
+npm run check          # TypeScript and Svelte diagnostics
+npm run build          # Production bundle
+npm run test:e2e       # Chromium and WebKit mobile workflows
+npm run test:coverage  # V8 coverage report for core TypeScript modules
+```
+
+Install the Playwright browser engines once before the first end-to-end run:
+
+```bash
+npm run test:e2e:install
+```
+
+`npm run verify` runs the complete local sequence. CI repeats the locked install, full dependency audit, unit tests, diagnostics, production build, and mobile browser suite on every push and pull request.
+
 ## License
 
 [MIT](LICENSE) © slicedearth

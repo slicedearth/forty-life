@@ -7,51 +7,21 @@
   import CommanderDamageMenu from './lib/CommanderDamageMenu.svelte'
   import ConfirmDialog from './lib/ConfirmDialog.svelte'
   import { LAYOUTS, GRID_COLUMNS, type Player, type HistoryEntry, type CommanderCard } from './lib/types'
+  import {
+    appendHistory,
+    applyCommanderDamageDelta,
+    applyCommanderTaxDelta,
+    applyLifeDelta,
+    applyPoisonDelta,
+    createPlayers,
+    renamePlayer as renamePlayerState,
+    resetPlayers,
+    undoHistoryEntry,
+    updatePlayerCommanders,
+  } from './lib/game'
+  import { clearSavedState, loadSavedState, saveSavedState } from './lib/storage'
 
-  const STORAGE_KEY = 'mtg-life-counter'
-  const MAX_HISTORY = 50
-
-  interface SavedState {
-    players: Player[]
-    startingLife: number
-    monarchId: number | null
-    initiativeId: number | null
-    dayNight: 'day' | 'night'
-  }
-
-  function loadSaved(): SavedState | null {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return null
-      const parsed = JSON.parse(raw) as Partial<SavedState>
-      if (!Array.isArray(parsed.players)) return null
-      const valid = parsed.players.every(
-        p => typeof p.color === 'string' && typeof p.poison === 'number' && p.commanderDamage
-      )
-      if (!valid) return null
-
-      const players = parsed.players.map(player => {
-        const commanders = Array.isArray(player.commanders) ? player.commanders : []
-        const savedTax = Array.isArray(player.commanderTax) ? player.commanderTax : []
-        const commanderTax = Array.from({ length: Math.max(1, commanders.length) }, (_, index) =>
-          Math.max(0, Number(savedTax[index]) || 0)
-        )
-        return { ...player, commanders, commanderTax }
-      })
-
-      return {
-        players,
-        startingLife: typeof parsed.startingLife === 'number' ? parsed.startingLife : 40,
-        monarchId: typeof parsed.monarchId === 'number' ? parsed.monarchId : null,
-        initiativeId: typeof parsed.initiativeId === 'number' ? parsed.initiativeId : null,
-        dayNight: parsed.dayNight === 'night' ? 'night' : 'day',
-      }
-    } catch {
-      return null
-    }
-  }
-
-  const saved = loadSaved()
+  const saved = loadSavedState()
 
   let players = $state<Player[]>(saved?.players ?? [])
   let startingLife = $state(saved?.startingLife ?? 40)
@@ -94,22 +64,13 @@
 
   $effect(() => {
     if (phase === 'game') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ players, startingLife, monarchId, initiativeId, dayNight }))
+      saveSavedState({ players, startingLife, monarchId, initiativeId, dayNight })
     }
   })
 
   function startGame(configs: { name: string; color: string; commanders: CommanderCard[] }[], life: number) {
     startingLife = life
-    players = configs.map((config, i) => ({
-      id: i,
-      name: config.name,
-      color: config.color,
-      life,
-      poison: 0,
-      commanderTax: Array(Math.max(1, config.commanders.length)).fill(0),
-      commanderDamage: {},
-      commanders: config.commanders,
-    }))
+    players = createPlayers(configs, life)
     history = []
     monarchId = null
     initiativeId = null
@@ -119,61 +80,43 @@
   }
 
   function pushHistory(entry: HistoryEntry) {
-    history = [...history.slice(-MAX_HISTORY + 1), entry]
+    history = appendHistory(history, entry)
   }
 
   function updateLife(id: number, delta: number) {
-    players = players.map(p => (p.id === id ? { ...p, life: p.life + delta } : p))
-    pushHistory({ type: 'life', playerId: id, delta })
+    const result = applyLifeDelta(players, id, delta)
+    players = result.players
+    if (result.appliedDelta !== 0) pushHistory({ type: 'life', playerId: id, delta: result.appliedDelta })
   }
 
   function updatePoison(id: number, delta: number) {
-    players = players.map(p =>
-      p.id === id ? { ...p, poison: Math.max(0, p.poison + delta) } : p
-    )
-    pushHistory({ type: 'poison', playerId: id, delta })
+    const result = applyPoisonDelta(players, id, delta)
+    players = result.players
+    if (result.appliedDelta !== 0) pushHistory({ type: 'poison', playerId: id, delta: result.appliedDelta })
   }
 
   function updateCommanderDamage(id: number, opponentId: number, delta: number) {
-    players = players.map(p => {
-      if (p.id !== id) return p
-      const current = p.commanderDamage[opponentId] ?? 0
-      const next = Math.max(0, current + delta)
-      return { ...p, commanderDamage: { ...p.commanderDamage, [opponentId]: next } }
-    })
-    pushHistory({ type: 'commanderDamage', playerId: id, opponentId, delta })
+    const result = applyCommanderDamageDelta(players, id, opponentId, delta)
+    players = result.players
+    if (result.appliedDelta !== 0) {
+      pushHistory({ type: 'commanderDamage', playerId: id, opponentId, delta: result.appliedDelta })
+    }
   }
 
   function updateCommanderTax(id: number, commanderIndex: number, delta: number) {
-    let appliedDelta = 0
-    players = players.map(p => {
-      if (p.id !== id) return p
-      const commanderTax = [...p.commanderTax]
-      while (commanderTax.length <= commanderIndex) commanderTax.push(0)
-      const current = commanderTax[commanderIndex] ?? 0
-      const next = Math.max(0, current + delta)
-      appliedDelta = next - current
-      commanderTax[commanderIndex] = next
-      return { ...p, commanderTax }
-    })
-    if (appliedDelta !== 0) {
-      pushHistory({ type: 'commanderTax', playerId: id, commanderIndex, delta: appliedDelta })
+    const result = applyCommanderTaxDelta(players, id, commanderIndex, delta)
+    players = result.players
+    if (result.appliedDelta !== 0) {
+      pushHistory({ type: 'commanderTax', playerId: id, commanderIndex, delta: result.appliedDelta })
     }
   }
 
   function renamePlayer(id: number, name: string) {
-    players = players.map(p => (p.id === id ? { ...p, name } : p))
+    players = renamePlayerState(players, id, name)
   }
 
   function updateCommanders(id: number, commanders: CommanderCard[]) {
-    players = players.map(p => {
-      if (p.id !== id) return p
-      const commanderTax = Array.from(
-        { length: Math.max(1, commanders.length) },
-        (_, index) => p.commanderTax[index] ?? 0
-      )
-      return { ...p, commanders, commanderTax }
-    })
+    players = updatePlayerCommanders(players, id, commanders)
   }
 
   function setMonarch(id: number) {
@@ -192,38 +135,11 @@
     if (history.length === 0) return
     const entry = history[history.length - 1]
     history = history.slice(0, -1)
-    if (entry.type === 'life') {
-      players = players.map(p => (p.id === entry.playerId ? { ...p, life: p.life - entry.delta } : p))
-    } else if (entry.type === 'poison') {
-      players = players.map(p =>
-        p.id === entry.playerId ? { ...p, poison: Math.max(0, p.poison - entry.delta) } : p
-      )
-    } else if (entry.type === 'commanderDamage') {
-      players = players.map(p => {
-        if (p.id !== entry.playerId) return p
-        const current = p.commanderDamage[entry.opponentId] ?? 0
-        const next = Math.max(0, current - entry.delta)
-        return { ...p, commanderDamage: { ...p.commanderDamage, [entry.opponentId]: next } }
-      })
-    } else {
-      players = players.map(p => {
-        if (p.id !== entry.playerId) return p
-        const commanderTax = [...p.commanderTax]
-        const current = commanderTax[entry.commanderIndex] ?? 0
-        commanderTax[entry.commanderIndex] = Math.max(0, current - entry.delta)
-        return { ...p, commanderTax }
-      })
-    }
+    players = undoHistoryEntry(players, entry)
   }
 
   function resetGame() {
-    players = players.map(p => ({
-      ...p,
-      life: startingLife,
-      poison: 0,
-      commanderDamage: {},
-      commanderTax: p.commanderTax.map(() => 0),
-    }))
+    players = resetPlayers(players, startingLife)
     history = []
     monarchId = null
     initiativeId = null
@@ -231,7 +147,7 @@
   }
 
   function newGame() {
-    localStorage.removeItem(STORAGE_KEY)
+    clearSavedState()
     players = []
     history = []
     monarchId = null

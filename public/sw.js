@@ -1,4 +1,4 @@
-const CACHE_NAME = 'forty-life-shell-v1'
+const CACHE_NAME = 'forty-life-shell-v2'
 const APP_SHELL = [
   '/manifest.webmanifest',
   '/icons/icon.svg',
@@ -43,7 +43,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (response.ok) {
+          if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
             void caches.open(CACHE_NAME).then(cache => cache.put('/', response.clone()))
           }
           return response
@@ -53,8 +53,11 @@ self.addEventListener('fetch', event => {
     return
   }
 
+  const isAppShellAsset = url.pathname.startsWith('/assets/') || APP_SHELL.includes(url.pathname)
+  if (!isAppShellAsset) return
+
   event.respondWith(
-    caches.match(request).then(cached => {
+    caches.match(request, { ignoreVary: true }).then(cached => {
       if (cached) return cached
       return fetch(request).then(response => {
         if (response.ok) {

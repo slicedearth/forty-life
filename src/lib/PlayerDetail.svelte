@@ -52,6 +52,8 @@
     <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-4">
       <input
         type="text"
+        maxlength="40"
+        aria-label="Player name"
         value={player.name}
         placeholder="Player name"
         class="min-h-11 min-w-0 flex-1 rounded-lg border border-white/15 bg-black/15 px-3 py-2 font-semibold text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"

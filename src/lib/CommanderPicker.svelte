@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { CircleAlert, LoaderCircle, SearchX, X } from '@lucide/svelte'
   import type { CommanderCard, PartnerMode } from './types'
   import {
@@ -41,6 +42,7 @@
   let primaryStatus = $state<SearchStatus>('idle')
   let primaryDebounce: ReturnType<typeof setTimeout>
   let primaryRequest = 0
+  let primaryController: AbortController | null = null
 
   let secondaryQuery = $state('')
   let secondarySuggestions = $state<CommanderCard[]>([])
@@ -48,6 +50,7 @@
   let secondaryStatus = $state<SearchStatus>('idle')
   let secondaryDebounce: ReturnType<typeof setTimeout>
   let secondaryRequest = 0
+  let secondaryController: AbortController | null = null
 
   const primary = $derived(value[0] ?? null)
   const secondary = $derived(value[1] ?? null)
@@ -66,6 +69,7 @@
 
   function onPrimaryInput() {
     clearTimeout(primaryDebounce)
+    primaryController?.abort()
     const request = ++primaryRequest
     primaryStatus = 'idle'
     if (!primaryQuery.trim()) {
@@ -75,8 +79,10 @@
     }
     primaryLoading = true
     primaryDebounce = setTimeout(async () => {
+      const controller = new AbortController()
+      primaryController = controller
       try {
-        const results = await searchCommanders(primaryQuery)
+        const results = await searchCommanders(primaryQuery, controller.signal)
         if (request !== primaryRequest) return
         primarySuggestions = results
         primaryStatus = results.length > 0 ? 'idle' : 'empty'
@@ -85,12 +91,16 @@
         primarySuggestions = []
         primaryStatus = 'error'
       } finally {
-        if (request === primaryRequest) primaryLoading = false
+        if (request === primaryRequest) {
+          primaryLoading = false
+          primaryController = null
+        }
       }
     }, 300)
   }
 
   async function pickPrimary(card: CommanderCard) {
+    primaryController?.abort()
     primaryQuery = card.name
     primaryRequest++
     primarySuggestions = []
@@ -101,9 +111,12 @@
 
     if (card.partnerMode === 'partner-with' && card.partnerWithName) {
       const request = ++secondaryRequest
+      secondaryController?.abort()
+      const controller = new AbortController()
+      secondaryController = controller
       secondaryLoading = true
       try {
-        const partner = await fetchCardByExactName(card.partnerWithName)
+        const partner = await fetchCardByExactName(card.partnerWithName, controller.signal)
         if (request !== secondaryRequest) return
         secondaryQuery = partner?.name ?? ''
         secondaryStatus = partner ? 'idle' : 'empty'
@@ -113,7 +126,10 @@
         secondaryStatus = 'error'
         onChange([card])
       } finally {
-        if (request === secondaryRequest) secondaryLoading = false
+        if (request === secondaryRequest) {
+          secondaryLoading = false
+          secondaryController = null
+        }
       }
     } else {
       onChange([card])
@@ -121,6 +137,8 @@
   }
 
   function clearPrimary() {
+    primaryController?.abort()
+    secondaryController?.abort()
     primaryQuery = ''
     primaryRequest++
     primaryLoading = false
@@ -135,6 +153,7 @@
 
   function onSecondaryInput() {
     clearTimeout(secondaryDebounce)
+    secondaryController?.abort()
     const request = ++secondaryRequest
     secondaryStatus = 'idle'
     if (!secondaryQuery.trim() || !secondaryKind) {
@@ -145,8 +164,10 @@
     const kind = secondaryKind
     secondaryLoading = true
     secondaryDebounce = setTimeout(async () => {
+      const controller = new AbortController()
+      secondaryController = controller
       try {
-        const results = await searchSecondaryCommander(kind, secondaryQuery)
+        const results = await searchSecondaryCommander(kind, secondaryQuery, controller.signal)
         if (request !== secondaryRequest) return
         secondarySuggestions = results
         secondaryStatus = results.length > 0 ? 'idle' : 'empty'
@@ -155,7 +176,10 @@
         secondarySuggestions = []
         secondaryStatus = 'error'
       } finally {
-        if (request === secondaryRequest) secondaryLoading = false
+        if (request === secondaryRequest) {
+          secondaryLoading = false
+          secondaryController = null
+        }
       }
     }, 300)
   }
@@ -169,6 +193,7 @@
   }
 
   function clearSecondary() {
+    secondaryController?.abort()
     secondaryQuery = ''
     secondaryRequest++
     secondaryLoading = false
@@ -176,6 +201,13 @@
     secondaryStatus = 'idle'
     if (primary) onChange([primary])
   }
+
+  onDestroy(() => {
+    clearTimeout(primaryDebounce)
+    clearTimeout(secondaryDebounce)
+    primaryController?.abort()
+    secondaryController?.abort()
+  })
 </script>
 
 <div class="flex flex-col gap-2">
@@ -194,6 +226,7 @@
         bind:value={primaryQuery}
         oninput={onPrimaryInput}
         aria-label="Search for a commander"
+        maxlength="120"
         autocomplete="off"
         placeholder="Search commander…"
         class="min-h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"
@@ -283,6 +316,7 @@
           bind:value={secondaryQuery}
           oninput={onSecondaryInput}
           aria-label={SECONDARY_PLACEHOLDERS[secondaryKind]}
+          maxlength="120"
           autocomplete="off"
           placeholder={SECONDARY_PLACEHOLDERS[secondaryKind]}
           class="min-h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/10 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"
