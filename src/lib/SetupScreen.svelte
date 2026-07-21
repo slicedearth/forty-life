@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Play } from '@lucide/svelte'
   import { PLAYER_COLORS, type CommanderCard } from "./types";
   import CommanderPicker from "./CommanderPicker.svelte";
 
@@ -54,102 +55,125 @@
   }
 </script>
 
-<div
-  class="flex h-full flex-col items-center justify-[safe_center] gap-8 overflow-y-auto px-6 py-10 text-center"
->
-  <div>
-    <p class="text-sm font-semibold tracking-widest text-accent uppercase">
-      Forty Life
-    </p>
-    <h1 class="mt-2 text-4xl font-bold text-white">Set up your game</h1>
-  </div>
+<div class="h-full overflow-y-auto">
+  <div class="mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-6 sm:px-6 sm:py-8">
+    <header class="text-center">
+      <p class="text-xs font-bold text-accent uppercase">Forty Life</p>
+      <h1 class="mt-1 text-3xl font-bold text-white">Set up your game</h1>
+    </header>
 
-  <div>
-    <p class="mb-3 text-sm font-medium text-gray-400">Players</p>
-    <div class="flex flex-wrap justify-center gap-2">
-      {#each playerCounts as count (count)}
-        <button
-          type="button"
-          class="h-12 w-12 rounded-full border font-semibold transition-colors {playerCount ===
-          count
-            ? 'border-accent bg-accent/20 text-accent'
-            : 'border-white/15 text-gray-300 hover:border-white/30'}"
-          onclick={() => setPlayerCount(count)}
-        >
-          {count}
-        </button>
-      {/each}
+    <section class="mt-7 grid gap-6 border-y border-white/10 py-5 sm:grid-cols-2 sm:gap-8">
+      <fieldset>
+        <legend class="mb-3 text-sm font-medium text-gray-400">Players</legend>
+        <div class="flex gap-2">
+          {#each playerCounts as count (count)}
+            <button
+              type="button"
+              aria-pressed={playerCount === count}
+              class="h-11 min-w-11 flex-1 rounded-lg border font-semibold transition-colors {playerCount === count
+                ? 'border-accent bg-accent/15 text-accent'
+                : 'border-white/15 text-gray-300 hover:border-white/30'}"
+              onclick={() => setPlayerCount(count)}
+            >
+              {count}
+            </button>
+          {/each}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class="mb-3 text-sm font-medium text-gray-400">Starting life</legend>
+        <div class="grid grid-cols-[1fr_1fr_5.5rem] gap-2">
+          {#each lifeTotals as { label, value } (value)}
+            <button
+              type="button"
+              aria-pressed={startingLife === value && !customLife}
+              class="min-h-11 rounded-lg border px-2 text-sm font-semibold transition-colors {startingLife === value && !customLife
+                ? 'border-accent bg-accent/15 text-accent'
+                : 'border-white/15 text-gray-300 hover:border-white/30'}"
+              onclick={() => {
+                startingLife = value;
+                customLife = "";
+              }}
+            >
+              {label} <span class="text-white/45">{value}</span>
+            </button>
+          {/each}
+          <input
+            type="number"
+            min="1"
+            inputmode="numeric"
+            aria-label="Custom starting life"
+            placeholder="Custom"
+            bind:value={customLife}
+            class="min-h-11 min-w-0 rounded-lg border border-white/15 bg-transparent px-2 text-center text-sm font-semibold text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"
+          />
+        </div>
+      </fieldset>
+    </section>
+
+    <div class="mt-6 flex items-end justify-between gap-4">
+      <div>
+        <h2 class="text-base font-semibold text-white">Players</h2>
+        <p class="text-xs text-white/45">Names, colors, and optional commander art</p>
+      </div>
+      <span class="text-xs font-medium text-white/35">{playerCount} total</span>
     </div>
-  </div>
 
-  <div>
-    <p class="mb-3 text-sm font-medium text-gray-400">Starting life</p>
-    <div class="flex flex-wrap justify-center gap-2">
-      {#each lifeTotals as { label, value } (value)}
-        <button
-          type="button"
-          class="rounded-full border px-4 py-2 font-semibold transition-colors {startingLife ===
-            value && !customLife
-            ? 'border-accent bg-accent/20 text-accent'
-            : 'border-white/15 text-gray-300 hover:border-white/30'}"
-          onclick={() => {
-            startingLife = value;
-            customLife = "";
-          }}
-        >
-          {label} ({value})
-        </button>
-      {/each}
-      <input
-        type="number"
-        placeholder="Custom"
-        bind:value={customLife}
-        class="w-24 rounded-full border border-white/15 bg-transparent px-4 py-2 text-center font-semibold text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"
-      />
-    </div>
-  </div>
-
-  <div class="w-full max-w-md">
-    <p class="mb-3 text-sm font-medium text-gray-400">Names &amp; colors</p>
-    <div class="flex flex-col gap-2">
+    <div class="mt-3 flex flex-col gap-3">
       {#each playerConfigs as config, i (i)}
-        <div class="flex flex-col gap-2 rounded-xl border border-white/10 p-2">
-          <div class="flex items-center gap-2">
+        <section class="overflow-visible rounded-lg border border-white/10 bg-white/[0.025] p-3 text-left">
+          <div class="flex items-center gap-3">
+            <span
+              class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+              style:background={config.color}
+            >
+              {i + 1}
+            </span>
             <input
               type="text"
               bind:value={config.name}
               placeholder="Player {i + 1}"
-              class="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-left font-medium text-white placeholder:text-gray-500 focus:outline-none"
+              aria-label="Player {i + 1} name"
+              class="min-h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-black/10 px-3 text-sm font-medium text-white placeholder:text-gray-500 focus:border-accent focus:outline-none"
             />
-            <div class="flex flex-shrink-0 gap-1">
-              {#each PLAYER_COLORS as color (color)}
-                <button
-                  type="button"
-                  aria-label="Choose color {color}"
-                  class="h-6 w-6 rounded-full border-2 transition-transform {config.color ===
-                  color
-                    ? 'scale-110 border-white'
-                    : 'border-transparent hover:scale-105'}"
-                  style:background={color}
-                  onclick={() => (config.color = color)}
-                ></button>
-              {/each}
-            </div>
           </div>
-          <CommanderPicker
-            value={config.commanders}
-            onChange={(cards) => (config.commanders = cards)}
-          />
-        </div>
+
+          <div class="mt-3 grid grid-cols-8 gap-1" aria-label="Player {i + 1} color">
+            {#each PLAYER_COLORS as color (color)}
+              <button
+                type="button"
+                aria-label="Choose color {color}"
+                aria-pressed={config.color === color}
+                class="flex h-9 items-center justify-center rounded-lg transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-accent"
+                onclick={() => (config.color = color)}
+              >
+                <span
+                  class="h-6 w-6 rounded-full border-2 transition-transform {config.color === color
+                    ? 'scale-110 border-white'
+                    : 'border-white/10'}"
+                  style:background={color}
+                ></span>
+              </button>
+            {/each}
+          </div>
+
+          <div class="mt-2 border-t border-white/10 pt-3">
+            <CommanderPicker value={config.commanders} onChange={(cards) => (config.commanders = cards)} />
+          </div>
+        </section>
       {/each}
     </div>
-  </div>
 
-  <button
-    type="button"
-    class="rounded-full bg-gradient-to-r from-accent to-accent-2 px-8 py-3 text-lg font-bold text-black shadow-lg transition-transform hover:scale-105"
-    onclick={start}
-  >
-    Start Game
-  </button>
+    <div class="sticky bottom-0 z-20 mt-5 border-t border-white/10 bg-bg/95 py-3 backdrop-blur-md">
+      <button
+        type="button"
+        class="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-accent px-8 text-base font-bold text-black shadow-lg shadow-cyan-950/30 transition-colors hover:bg-cyan-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        onclick={start}
+      >
+        <Play size={18} fill="currentColor" strokeWidth={2.25} />
+        Start game
+      </button>
+    </div>
+  </div>
 </div>

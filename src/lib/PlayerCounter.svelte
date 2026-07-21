@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Crown, KeyRound, Minus, MoreHorizontal, Plus, Skull, Swords } from '@lucide/svelte'
   import type { Player } from './types'
 
   interface Props {
@@ -104,20 +105,23 @@
   const worstCommanderDamage = $derived(
     Math.max(0, ...Object.values(player.commanderDamage))
   )
+  const isLethal = $derived(player.life <= 0 || player.poison >= 10 || worstCommanderDamage >= 21)
 
   const lifeDigits = $derived(player.life.toString().replace('-', '').length)
   const lifeFontSize = $derived(
     lifeDigits >= 3
-      ? 'clamp(1.5rem, min(7vw, 5vh), 3.25rem)'
-      : 'clamp(2rem, min(9vw, 6.5vh), 4.5rem)'
+      ? 'clamp(1.5rem, min(20cqw, 24cqh), 3.25rem)'
+      : 'clamp(2rem, min(25cqw, 30cqh), 4.5rem)'
   )
-  const pmFontSize = 'clamp(1rem, min(5vw, 4vh), 2.25rem)'
+  const pmIconSize = 'clamp(1rem, min(11cqw, 16cqh), 2rem)'
 </script>
 
 <div
-  class="relative flex h-full w-full flex-row overflow-hidden border-4"
+  class="player-counter relative flex h-full w-full flex-row overflow-hidden border-4"
+  class:is-lethal={isLethal}
   style:background={player.color}
   style:border-color={player.color}
+  style:container-type="size"
   class:rotate-180={rotate}
 >
   {#if player.commanders?.length}
@@ -126,8 +130,12 @@
         <div class="flex-1 bg-cover bg-center" style:background-image="url('{commander.imageUrl}')"></div>
       {/each}
     </div>
-    <div class="pointer-events-none absolute inset-0 bg-black/45"></div>
+    <div
+      class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.34),rgba(0,0,0,0.56))]"
+    ></div>
   {/if}
+
+  <div class="pointer-events-none absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-white/10"></div>
 
   <button
     type="button"
@@ -151,22 +159,18 @@
   <button
     type="button"
     aria-label="Open details for {player.name}"
-    class="pointer-events-auto absolute right-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
+    class="icon-tool pointer-events-auto absolute right-2 bottom-2"
     onclick={(e) => {
       e.stopPropagation()
       onOpenDetail()
     }}
   >
-    <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
-      <circle cx="4" cy="10" r="1.5" />
-      <circle cx="10" cy="10" r="1.5" />
-      <circle cx="16" cy="10" r="1.5" />
-    </svg>
+    <MoreHorizontal size={17} strokeWidth={2.25} />
   </button>
 
   {#if opponents.length > 0}
     <div
-      class="pointer-events-auto absolute bottom-2 left-2 hidden max-w-[calc(100%-3rem)] gap-1.5 overflow-x-auto rounded-2xl border border-white/15 bg-black/40 p-1.5 backdrop-blur sm:flex"
+      class="damage-pips pointer-events-auto absolute bottom-2 left-2 max-w-[calc(100%-3rem)] gap-1.5 rounded-full border border-white/15 bg-black/50 p-1.5 shadow-md backdrop-blur"
     >
       {#each opponents as opponent (opponent.id)}
         {@const damage = player.commanderDamage[opponent.id] ?? 0}
@@ -198,13 +202,13 @@
     <button
       type="button"
       aria-label="Assign commander damage"
-      class="pointer-events-auto absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/40 text-sm text-white/80 backdrop-blur transition-colors hover:border-white/30 hover:text-white sm:hidden"
+      class="damage-menu-button icon-tool pointer-events-auto absolute bottom-2 left-2"
       onclick={(e) => {
         e.stopPropagation()
         onOpenDamageMenu()
       }}
     >
-      ⚔
+      <Swords size={16} strokeWidth={2.25} />
       {#if worstCommanderDamage > 0}
         <span
           class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white {worstCommanderDamage >=
@@ -218,49 +222,48 @@
     </button>
   {/if}
 
-  <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 pt-2 pb-16">
-    <span class="text-sm font-semibold tracking-wide text-white/70 uppercase">
+  <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1 pt-2 pb-16">
+    <span class="max-w-[78%] truncate text-xs font-semibold text-white/70 uppercase sm:text-sm">
       {player.name}
     </span>
-    <div class="flex items-center gap-2">
-      <span
-        class="leading-none font-bold text-white/40 drop-shadow-lg select-none"
-        style:font-size={pmFontSize}
-      >
-        −
+    <div class="grid w-full grid-cols-[minmax(1.25rem,1fr)_auto_minmax(1.25rem,1fr)] items-center gap-1">
+      <span class="flex justify-end text-white/45 drop-shadow-lg" style:font-size={pmIconSize}>
+        <Minus size="1em" strokeWidth={2.5} />
       </span>
       <span
-        class="font-bold text-white drop-shadow-lg tabular-nums"
+        class="min-w-0 text-center leading-none font-bold text-white drop-shadow-lg tabular-nums"
         style:font-size={lifeFontSize}
       >
         {player.life}
       </span>
-      <span
-        class="leading-none font-bold text-white/40 drop-shadow-lg select-none"
-        style:font-size={pmFontSize}
-      >
-        +
+      <span class="flex justify-start text-white/45 drop-shadow-lg" style:font-size={pmIconSize}>
+        <Plus size="1em" strokeWidth={2.5} />
       </span>
     </div>
-    <div class="flex h-6 items-center gap-1.5 text-xs font-semibold">
+    <div class="flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1 overflow-hidden text-[10px] font-semibold sm:text-xs">
       {#if isMonarch}
-        <span class="rounded-full bg-amber-900/70 px-2 py-0.5 text-amber-300">👑</span>
+        <span class="status-chip bg-amber-900/75 text-amber-200" title="Monarch">
+          <Crown size={12} strokeWidth={2.25} />
+        </span>
       {/if}
       {#if isInitiative}
-        <span class="rounded-full bg-violet-900/70 px-2 py-0.5 text-violet-300">🗝️</span>
+        <span class="status-chip bg-violet-900/75 text-violet-200" title="Initiative">
+          <KeyRound size={12} strokeWidth={2.25} />
+        </span>
       {/if}
       {#if player.poison > 0}
-        <span class="rounded-full bg-emerald-900/70 px-2 py-0.5 text-emerald-300">
-          ☠ {player.poison}
+        <span class="status-chip bg-emerald-900/75 text-emerald-200" title="Poison counters">
+          <Skull size={11} strokeWidth={2.25} /> {player.poison}
         </span>
       {/if}
       {#if worstCommanderDamage > 0}
         <span
-          class="rounded-full px-2 py-0.5 {worstCommanderDamage >= 21
+          class="status-chip {worstCommanderDamage >= 21
             ? 'bg-red-900/80 text-red-300'
             : 'bg-orange-900/70 text-orange-300'}"
+          title="Highest commander damage"
         >
-          ⚔ {worstCommanderDamage}
+          <Swords size={11} strokeWidth={2.25} /> {worstCommanderDamage}
         </span>
       {/if}
     </div>
@@ -273,3 +276,63 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .player-counter {
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+
+  .player-counter.is-lethal {
+    box-shadow: inset 0 0 0 3px rgb(248 113 113 / 0.9), inset 0 0 3rem rgb(127 29 29 / 0.42);
+  }
+
+  .icon-tool {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(255 255 255 / 0.16);
+    border-radius: 9999px;
+    background: rgb(0 0 0 / 0.48);
+    color: rgb(255 255 255 / 0.76);
+    backdrop-filter: blur(8px);
+    transition: border-color 150ms, background-color 150ms, color 150ms;
+  }
+
+  .icon-tool:hover,
+  .icon-tool:focus-visible {
+    border-color: rgb(255 255 255 / 0.35);
+    background: rgb(0 0 0 / 0.64);
+    color: white;
+    outline: none;
+  }
+
+  .status-chip {
+    display: inline-flex;
+    height: 1.25rem;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.2rem;
+    border-radius: 9999px;
+    padding: 0 0.4rem;
+  }
+
+  .damage-pips {
+    display: none;
+  }
+
+  .damage-menu-button {
+    display: flex;
+  }
+
+  @container (min-width: 16rem) {
+    .damage-pips {
+      display: flex;
+    }
+
+    .damage-menu-button {
+      display: none;
+    }
+  }
+</style>

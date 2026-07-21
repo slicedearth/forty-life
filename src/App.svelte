@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+  import { FilePlus2, Moon, RotateCcw, Sun, Undo2 } from '@lucide/svelte'
   import SetupScreen from './lib/SetupScreen.svelte'
   import PlayerCounter from './lib/PlayerCounter.svelte'
   import PlayerDetail from './lib/PlayerDetail.svelte'
@@ -41,6 +43,34 @@
   let monarchId = $state<number | null>(saved?.monarchId ?? null)
   let initiativeId = $state<number | null>(saved?.initiativeId ?? null)
   let dayNight = $state<'day' | 'night'>(saved?.dayNight ?? 'day')
+  let wakeLock: WakeLockSentinel | null = null
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return
+    try {
+      wakeLock = await navigator.wakeLock.request('screen')
+    } catch {
+      // Wake lock is progressive enhancement and may be denied by the browser.
+    }
+  }
+
+  async function releaseWakeLock() {
+    if (!wakeLock) return
+    await wakeLock.release()
+    wakeLock = null
+  }
+
+  onMount(() => {
+    const handleVisibilityChange = () => {
+      if (phase === 'game' && document.visibilityState === 'visible') void requestWakeLock()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    if (phase === 'game') void requestWakeLock()
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      void releaseWakeLock()
+    }
+  })
 
   $effect(() => {
     if (phase === 'game') {
@@ -64,6 +94,7 @@
     initiativeId = null
     dayNight = 'day'
     phase = 'game'
+    void requestWakeLock()
   }
 
   function pushHistory(entry: HistoryEntry) {
@@ -150,6 +181,7 @@
     initiativeId = null
     dayNight = 'day'
     phase = 'setup'
+    void releaseWakeLock()
   }
 
   const layout = $derived(LAYOUTS[players.length] ?? LAYOUTS[4])
@@ -218,44 +250,44 @@
         style:background-color={dayNight === 'night' ? 'rgba(30, 27, 75, 0.45)' : 'transparent'}
       ></div>
 
-      <div class="pointer-events-none absolute inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center gap-3">
-        <button
-          type="button"
-          aria-label="Undo"
-          title="Undo"
-          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white disabled:opacity-30"
-          onclick={undo}
-          disabled={history.length === 0}
+      <div class="pointer-events-none absolute inset-x-0 top-1/2 z-50 flex -translate-y-1/2 justify-center px-2">
+        <div
+          class="pointer-events-auto flex items-center rounded-full border border-white/15 bg-black/65 p-1 shadow-lg backdrop-blur-md"
+          role="toolbar"
+          aria-label="Game controls"
         >
-          ↩️
-        </button>
-        <button
-          type="button"
-          aria-label="Reset Life"
-          title="Reset Life"
-          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
-          onclick={resetLife}
-        >
-          🔄
-        </button>
-        <button
-          type="button"
-          aria-label="New Game"
-          title="New Game"
-          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
-          onclick={newGame}
-        >
-          🆕
-        </button>
-        <button
-          type="button"
-          aria-label="Toggle day or night"
-          title={dayNight === 'day' ? 'Day' : 'Night'}
-          class="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-base text-white/70 backdrop-blur transition-colors hover:border-white/30 hover:text-white"
-          onclick={toggleDayNight}
-        >
-          {dayNight === 'day' ? '☀️' : '🌙'}
-        </button>
+          <button
+            type="button"
+            aria-label="Undo"
+            title="Undo"
+            class="game-tool"
+            onclick={undo}
+            disabled={history.length === 0}
+          >
+            <Undo2 size={17} strokeWidth={2.25} />
+          </button>
+          <button type="button" aria-label="Reset life" title="Reset life" class="game-tool" onclick={resetLife}>
+            <RotateCcw size={17} strokeWidth={2.25} />
+          </button>
+          <button type="button" aria-label="New game" title="New game" class="game-tool" onclick={newGame}>
+            <FilePlus2 size={17} strokeWidth={2.25} />
+          </button>
+          <span class="mx-1 h-5 w-px bg-white/15" aria-hidden="true"></span>
+          <button
+            type="button"
+            aria-label={dayNight === 'day' ? 'Switch to night' : 'Switch to day'}
+            title={dayNight === 'day' ? 'Day' : 'Night'}
+            aria-pressed={dayNight === 'night'}
+            class="game-tool {dayNight === 'night' ? '!bg-indigo-400/25 !text-indigo-100' : ''}"
+            onclick={toggleDayNight}
+          >
+            {#if dayNight === 'day'}
+              <Sun size={17} strokeWidth={2.25} />
+            {:else}
+              <Moon size={17} strokeWidth={2.25} />
+            {/if}
+          </button>
+        </div>
       </div>
 
       {#if detailPlayer}
@@ -289,3 +321,27 @@
     </div>
   {/if}
 </main>
+
+<style>
+  .game-tool {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: rgb(255 255 255 / 0.72);
+    transition: background-color 150ms, color 150ms, opacity 150ms;
+  }
+
+  .game-tool:hover,
+  .game-tool:focus-visible {
+    background: rgb(255 255 255 / 0.12);
+    color: white;
+    outline: none;
+  }
+
+  .game-tool:disabled {
+    opacity: 0.28;
+  }
+</style>

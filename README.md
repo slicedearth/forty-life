@@ -52,11 +52,13 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 - **Commander damage**, tracked per opponent (21 from one opponent is lethal) — on wide screens, tap a small portrait of the attacker to log damage in place; on narrow phones, a single "⚔" button opens a full menu instead so nothing gets cramped
 - **The Monarch** and **the Initiative**, each toggled from a player's detail panel with a passive crown/key badge showing who currently holds it
 - **Day/Night**, a one-tap toggle that washes the whole screen in a cool blue tint — handy for werewolf decks, visible at a glance from across the table
+- **Lethal-state emphasis** highlights a counter when life reaches 0, poison reaches 10, or commander damage reaches 21
 
 ### 📱 Built for a phone on the table, not just a desktop
 
 - Tested down to a 375px-wide screen and sideways (landscape) layouts, where tiles are short and wide instead of tall and narrow
 - Respects notches and home indicators via `env(safe-area-inset-*)`
+- Requests a screen wake lock while a game is active where the browser supports it, so the shared display does not sleep mid-turn
 - Every tap target stays reachable and non-overlapping regardless of player count, screen size, or orientation
 
 ### ↩️ Forgiving by default
@@ -109,6 +111,7 @@ src/
 - [Vite](https://vite.dev/) — dev server and build tool
 - [Tailwind CSS 4](https://tailwindcss.com/) — styling
 - [TypeScript](https://www.typescriptlang.org/) — throughout
+- [Lucide](https://lucide.dev/) — consistent, accessible interface icons
 - [Scryfall API](https://scryfall.com/docs/api) — commander search and card art, called directly from the client
 
 ## License
