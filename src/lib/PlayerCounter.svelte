@@ -235,13 +235,45 @@
     </button>
   {/if}
 
-  <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1 pt-2 pb-16">
-    <span
-      data-player-name
-      class="player-name block h-5 max-w-[78%] shrink-0 overflow-hidden px-1 text-xs leading-5 font-semibold text-ellipsis whitespace-nowrap text-white/70 uppercase sm:text-sm"
-    >
-      {player.name}
-    </span>
+  <div class="counter-readout pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1">
+    <div data-player-meta class="player-meta-row">
+      <span
+        data-player-name
+        class="player-name block h-5 min-w-0 max-w-[78%] shrink overflow-hidden px-1 text-xs leading-5 font-semibold text-ellipsis whitespace-nowrap text-white/70 uppercase sm:text-sm"
+      >
+        {player.name}
+      </span>
+      <div
+        data-player-status
+        class="status-row flex h-6 max-w-[calc(100%-0.5rem)] shrink-0 items-center gap-1 overflow-hidden text-[10px] font-semibold sm:text-xs"
+      >
+        {#if isMonarch}
+          <span class="status-chip bg-amber-900/75 text-amber-200" title="Monarch">
+            <Crown size={12} strokeWidth={2.25} />
+          </span>
+        {/if}
+        {#if isInitiative}
+          <span class="status-chip bg-violet-900/75 text-violet-200" title="Initiative">
+            <KeyRound size={12} strokeWidth={2.25} />
+          </span>
+        {/if}
+        {#if player.poison > 0}
+          <span class="status-chip bg-emerald-900/75 text-emerald-200" title="Poison counters">
+            <Skull size={11} strokeWidth={2.25} /> {player.poison}
+          </span>
+        {/if}
+        {#if worstCommanderDamage > 0}
+          <span
+            class="status-chip {worstCommanderDamage >= 21
+              ? 'bg-red-900/80 text-red-300'
+              : 'bg-orange-900/70 text-orange-300'}"
+            title="Highest commander damage"
+          >
+            <Swords size={11} strokeWidth={2.25} /> {worstCommanderDamage}
+          </span>
+        {/if}
+      </div>
+    </div>
     <div
       data-life-row
       class="life-row grid w-full grid-cols-[minmax(1.25rem,1fr)_auto_minmax(1.25rem,1fr)] items-center gap-1"
@@ -258,35 +290,6 @@
       <span class="flex justify-start text-white/45 drop-shadow-lg" style:font-size={pmIconSize}>
         <Plus size="1em" strokeWidth={2.5} />
       </span>
-    </div>
-    <div
-      class="status-row flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1 overflow-hidden text-[10px] font-semibold sm:text-xs"
-    >
-      {#if isMonarch}
-        <span class="status-chip bg-amber-900/75 text-amber-200" title="Monarch">
-          <Crown size={12} strokeWidth={2.25} />
-        </span>
-      {/if}
-      {#if isInitiative}
-        <span class="status-chip bg-violet-900/75 text-violet-200" title="Initiative">
-          <KeyRound size={12} strokeWidth={2.25} />
-        </span>
-      {/if}
-      {#if player.poison > 0}
-        <span class="status-chip bg-emerald-900/75 text-emerald-200" title="Poison counters">
-          <Skull size={11} strokeWidth={2.25} /> {player.poison}
-        </span>
-      {/if}
-      {#if worstCommanderDamage > 0}
-        <span
-          class="status-chip {worstCommanderDamage >= 21
-            ? 'bg-red-900/80 text-red-300'
-            : 'bg-orange-900/70 text-orange-300'}"
-          title="Highest commander damage"
-        >
-          <Swords size={11} strokeWidth={2.25} /> {worstCommanderDamage}
-        </span>
-      {/if}
     </div>
     {#if flashDelta !== null}
       <span
@@ -305,6 +308,27 @@
 
   .player-counter.is-lethal {
     box-shadow: inset 0 0 0 3px rgb(248 113 113 / 0.9), inset 0 0 3rem rgb(127 29 29 / 0.42);
+  }
+
+  .counter-readout {
+    padding-top: 0.5rem;
+    padding-bottom: 4rem;
+  }
+
+  .player-meta-row {
+    display: contents;
+  }
+
+  .player-name {
+    order: 1;
+  }
+
+  .life-row {
+    order: 2;
+  }
+
+  .status-row {
+    order: 3;
   }
 
   .icon-tool {
@@ -358,16 +382,23 @@
   }
 
   @media (orientation: landscape) and (max-height: 30rem) {
+    .counter-readout {
+      padding-top: 1.25rem;
+    }
+
     .life-row {
       order: 1;
     }
 
-    .player-name {
+    .player-meta-row {
       order: 2;
-    }
-
-    .status-row {
-      order: 3;
+      display: flex;
+      height: 1.5rem;
+      width: calc(100% - 0.5rem);
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 0.25rem;
     }
   }
 </style>

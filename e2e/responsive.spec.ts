@@ -27,9 +27,19 @@ test('short landscape layout keeps controls inside the viewport', async ({ page 
 })
 
 test('wide mobile landscape keeps player names clear of the center controls', async ({ page }) => {
-  await page.setViewportSize({ width: 915, height: 340 })
+  await page.setViewportSize({ width: 915, height: 320 })
   await startGame(page, 6)
   await expectNoPageOverflow(page)
+
+  await page.getByRole('button', { name: 'Open details for Player 2' }).click()
+  await page.getByRole('button', { name: 'Take monarch' }).click()
+  await page.getByRole('button', { name: 'Take initiative' }).click()
+  const poison = page.locator('section').filter({ hasText: 'Poison (10 is lethal)' })
+  await poison.getByRole('button', { name: '+1' }).click()
+  await page.getByRole('button', { name: 'Close' }).click()
+
+  const middleTopPlayer = page.locator('[data-player-id="1"]')
+  await middleTopPlayer.getByRole('button', { name: 'Deal commander damage from Player 1' }).click()
 
   const toolbar = await page.getByRole('toolbar', { name: 'Game controls' }).boundingBox()
   expect(toolbar).not.toBeNull()
@@ -52,6 +62,40 @@ test('wide mobile landscape keeps player names clear of the center controls', as
           nameBox.y >= toolbar.y + toolbar.height
         )
         expect(overlapsToolbar).toBe(false)
+      }
+    }
+
+    const lifeRows = page.locator('[data-life-row]')
+    await expect(lifeRows).toHaveCount(6)
+    for (const lifeRow of await lifeRows.all()) {
+      const lifeBox = await lifeRow.boundingBox()
+      expect(lifeBox).not.toBeNull()
+
+      if (lifeBox) {
+        const overlapsToolbar = !(
+          lifeBox.x + lifeBox.width <= toolbar.x ||
+          lifeBox.x >= toolbar.x + toolbar.width ||
+          lifeBox.y + lifeBox.height <= toolbar.y ||
+          lifeBox.y >= toolbar.y + toolbar.height
+        )
+        expect(overlapsToolbar).toBe(false)
+      }
+    }
+  }
+
+  const statusRow = middleTopPlayer.locator('[data-player-status]')
+  const statusBox = await statusRow.boundingBox()
+  expect(statusBox).not.toBeNull()
+  const statusChips = statusRow.locator('.status-chip')
+  await expect(statusChips).toHaveCount(4)
+
+  if (statusBox) {
+    for (const chip of await statusChips.all()) {
+      const chipBox = await chip.boundingBox()
+      expect(chipBox).not.toBeNull()
+      if (chipBox) {
+        expect(chipBox.y).toBeGreaterThanOrEqual(statusBox.y - 1)
+        expect(chipBox.y + chipBox.height).toBeLessThanOrEqual(statusBox.y + statusBox.height + 1)
       }
     }
   }
