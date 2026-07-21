@@ -236,10 +236,16 @@
   {/if}
 
   <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1 pt-2 pb-16">
-    <span class="max-w-[78%] truncate text-xs font-semibold text-white/70 uppercase sm:text-sm">
+    <span
+      data-player-name
+      class="player-name block h-5 max-w-[78%] shrink-0 overflow-hidden px-1 text-xs leading-5 font-semibold text-ellipsis whitespace-nowrap text-white/70 uppercase sm:text-sm"
+    >
       {player.name}
     </span>
-    <div class="grid w-full grid-cols-[minmax(1.25rem,1fr)_auto_minmax(1.25rem,1fr)] items-center gap-1">
+    <div
+      data-life-row
+      class="life-row grid w-full grid-cols-[minmax(1.25rem,1fr)_auto_minmax(1.25rem,1fr)] items-center gap-1"
+    >
       <span class="flex justify-end text-white/45 drop-shadow-lg" style:font-size={pmIconSize}>
         <Minus size="1em" strokeWidth={2.5} />
       </span>
@@ -253,7 +259,9 @@
         <Plus size="1em" strokeWidth={2.5} />
       </span>
     </div>
-    <div class="flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1 overflow-hidden text-[10px] font-semibold sm:text-xs">
+    <div
+      class="status-row flex h-6 max-w-[calc(100%-0.5rem)] items-center gap-1 overflow-hidden text-[10px] font-semibold sm:text-xs"
+    >
       {#if isMonarch}
         <span class="status-chip bg-amber-900/75 text-amber-200" title="Monarch">
           <Crown size={12} strokeWidth={2.25} />
@@ -346,6 +354,20 @@
 
     .damage-menu-button {
       display: none;
+    }
+  }
+
+  @media (orientation: landscape) and (max-height: 30rem) {
+    .life-row {
+      order: 1;
+    }
+
+    .player-name {
+      order: 2;
+    }
+
+    .status-row {
+      order: 3;
     }
   }
 </style>
