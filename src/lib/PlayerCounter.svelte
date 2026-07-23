@@ -41,7 +41,7 @@
     onChange(delta)
     flashDelta = delta
     clearTimeout(flashTimeout)
-    flashTimeout = setTimeout(() => (flashDelta = null), 600)
+    flashTimeout = setTimeout(() => (flashDelta = null), 360)
   }
 
   function startPress(direction: 1 | -1) {
@@ -282,7 +282,10 @@
         <Minus size="1em" strokeWidth={2.5} />
       </span>
       <span
-        class="min-w-0 text-center leading-none font-bold text-white drop-shadow-lg tabular-nums"
+        data-life-total
+        class="life-total min-w-0 text-center leading-none font-bold text-white drop-shadow-lg tabular-nums"
+        class:life-increase={flashDelta !== null && flashDelta > 0}
+        class:life-decrease={flashDelta !== null && flashDelta < 0}
         style:font-size={lifeFontSize}
       >
         {player.life}
@@ -291,13 +294,6 @@
         <Plus size="1em" strokeWidth={2.5} />
       </span>
     </div>
-    {#if flashDelta !== null}
-      <span
-        class="absolute -bottom-2 text-2xl font-bold {flashDelta > 0 ? 'text-emerald-300' : 'text-red-300'}"
-      >
-        {flashDelta > 0 ? '+' : ''}{flashDelta}
-      </span>
-    {/if}
   </div>
 </div>
 
@@ -329,6 +325,22 @@
 
   .status-row {
     order: 3;
+  }
+
+  .life-total {
+    transition: color 120ms ease, transform 120ms ease, filter 120ms ease;
+  }
+
+  .life-total.life-increase {
+    color: rgb(134 239 172);
+    filter: drop-shadow(0 0 0.6rem rgb(34 197 94 / 0.7));
+    transform: scale(1.08);
+  }
+
+  .life-total.life-decrease {
+    color: rgb(252 165 165);
+    filter: drop-shadow(0 0 0.6rem rgb(239 68 68 / 0.7));
+    transform: scale(1.08);
   }
 
   .icon-tool {

@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  POD_STORAGE_KEY,
+  POD_STORAGE_VERSION,
   STORAGE_KEY,
   STORAGE_VERSION,
   clearSavedState,
+  loadSavedPod,
   loadSavedState,
+  parseSavedPod,
   parseSavedState,
+  saveSavedPod,
   saveSavedState,
 } from './storage'
 
@@ -44,6 +49,15 @@ function validState() {
         commanders: [],
       },
     ],
+  }
+}
+
+function validPod() {
+  const state = validState()
+  return {
+    version: POD_STORAGE_VERSION,
+    startingLife: 37,
+    players: state.players.map(({ name, color, commanders }) => ({ name, color, commanders })),
   }
 }
 
@@ -128,5 +142,69 @@ describe('saved game validation', () => {
       STORAGE_KEY,
       expect.stringContaining(`\"version\":${STORAGE_VERSION}`)
     )
+  })
+})
+
+describe('last pod validation', () => {
+  it('loads bounded setup data without game counters', () => {
+    const parsed = parseSavedPod(JSON.stringify(validPod()))
+
+    expect(parsed).toMatchObject({
+      startingLife: 37,
+      players: [
+        { name: 'Alice', color: '#b91c1c' },
+        { name: 'Bob', color: '#c2410c' },
+      ],
+    })
+    expect(parsed?.players[0].commanders[0].imageUrl).toContain('cards.scryfall.io')
+  })
+
+  it('rejects malformed versions and player counts', () => {
+    expect(parseSavedPod(null)).toBeNull()
+    expect(parseSavedPod('{invalid')).toBeNull()
+    expect(parseSavedPod(JSON.stringify({ ...validPod(), version: 99 }))).toBeNull()
+    expect(parseSavedPod(JSON.stringify({ ...validPod(), players: [] }))).toBeNull()
+  })
+
+  it('normalizes pod names, colors, artwork, and starting life', () => {
+    const pod = validPod()
+    pod.startingLife = -20
+    pod.players[0].name = ` ${'A'.repeat(80)} `
+    pod.players[0].color = 'transparent'
+    pod.players[0].commanders[0].imageUrl = 'https://example.com/tracker.png'
+
+    const parsed = parseSavedPod(JSON.stringify(pod))
+
+    expect(parsed?.startingLife).toBe(1)
+    expect(parsed?.players[0].name).toHaveLength(40)
+    expect(parsed?.players[0].color).toBe('#b91c1c')
+    expect(parsed?.players[0].commanders).toEqual([])
+  })
+
+  it('writes and loads a versioned pod record', () => {
+    const writer = { setItem: vi.fn() }
+    const parsed = parseSavedPod(JSON.stringify(validPod()))
+    if (!parsed) throw new Error('Fixture should be valid')
+
+    expect(saveSavedPod(parsed, writer)).toBe(true)
+    expect(writer.setItem).toHaveBeenCalledWith(
+      POD_STORAGE_KEY,
+      expect.stringContaining(`\"version\":${POD_STORAGE_VERSION}`)
+    )
+
+    const reader = { getItem: vi.fn(() => JSON.stringify({ version: POD_STORAGE_VERSION, ...parsed })) }
+    expect(loadSavedPod(reader)).toEqual(parsed)
+  })
+
+  it('fails closed when pod storage is unavailable', () => {
+    const storage = {
+      getItem: vi.fn(() => { throw new Error('blocked') }),
+      setItem: vi.fn(() => { throw new Error('quota') }),
+    }
+    const parsed = parseSavedPod(JSON.stringify(validPod()))
+    if (!parsed) throw new Error('Fixture should be valid')
+
+    expect(loadSavedPod(storage)).toBeNull()
+    expect(saveSavedPod(parsed, storage)).toBe(false)
   })
 })

@@ -18,12 +18,22 @@
     resetPlayers,
     undoHistoryEntry,
     updatePlayerCommanders,
+    type PlayerConfig,
   } from './lib/game'
-  import { clearSavedState, loadSavedState, saveSavedState } from './lib/storage'
+  import { requestHaptic } from './lib/feedback'
+  import {
+    clearSavedState,
+    loadSavedPod,
+    loadSavedState,
+    saveSavedPod,
+    saveSavedState,
+    type SavedPod,
+  } from './lib/storage'
 
   const saved = loadSavedState()
 
   let players = $state<Player[]>(saved?.players ?? [])
+  let lastPod = $state<SavedPod | null>(loadSavedPod())
   let startingLife = $state(saved?.startingLife ?? 40)
   let phase = $state<'setup' | 'game'>(saved && saved.players.length > 0 ? 'game' : 'setup')
   let history = $state<HistoryEntry[]>([])
@@ -33,6 +43,7 @@
   let monarchId = $state<number | null>(saved?.monarchId ?? null)
   let initiativeId = $state<number | null>(saved?.initiativeId ?? null)
   let dayNight = $state<'day' | 'night'>(saved?.dayNight ?? 'day')
+  let announcement = $state('')
   let wakeLock: WakeLockSentinel | null = null
 
   async function requestWakeLock() {
@@ -68,7 +79,19 @@
     }
   })
 
-  function startGame(configs: { name: string; color: string; commanders: CommanderCard[] }[], life: number) {
+  function announce(message: string) {
+    announcement = message
+  }
+
+  function startGame(configs: PlayerConfig[], life: number) {
+    lastPod = {
+      players: configs.map(config => ({
+        ...config,
+        commanders: config.commanders.map(commander => ({ ...commander })),
+      })),
+      startingLife: life,
+    }
+    saveSavedPod(lastPod)
     startingLife = life
     players = createPlayers(configs, life)
     history = []
@@ -86,13 +109,28 @@
   function updateLife(id: number, delta: number) {
     const result = applyLifeDelta(players, id, delta)
     players = result.players
-    if (result.appliedDelta !== 0) pushHistory({ type: 'life', playerId: id, delta: result.appliedDelta })
+    if (result.appliedDelta !== 0) {
+      pushHistory({ type: 'life', playerId: id, delta: result.appliedDelta })
+      const player = players.find(candidate => candidate.id === id)
+      if (player) {
+        const direction = result.appliedDelta > 0 ? 'gained' : 'lost'
+        announce(
+          `${player.name} ${direction} ${Math.abs(result.appliedDelta)} life. ${player.life} life remaining.`
+        )
+      }
+      requestHaptic()
+    }
   }
 
   function updatePoison(id: number, delta: number) {
     const result = applyPoisonDelta(players, id, delta)
     players = result.players
-    if (result.appliedDelta !== 0) pushHistory({ type: 'poison', playerId: id, delta: result.appliedDelta })
+    if (result.appliedDelta !== 0) {
+      pushHistory({ type: 'poison', playerId: id, delta: result.appliedDelta })
+      const player = players.find(candidate => candidate.id === id)
+      if (player) announce(`${player.name} has ${player.poison} poison counters.`)
+      requestHaptic()
+    }
   }
 
   function updateCommanderDamage(id: number, opponentId: number, delta: number) {
@@ -100,6 +138,14 @@
     players = result.players
     if (result.appliedDelta !== 0) {
       pushHistory({ type: 'commanderDamage', playerId: id, opponentId, delta: result.appliedDelta })
+      const player = players.find(candidate => candidate.id === id)
+      const opponent = players.find(candidate => candidate.id === opponentId)
+      if (player && opponent) {
+        announce(
+          `${player.name} has ${player.commanderDamage[opponentId] ?? 0} commander damage from ${opponent.name}.`
+        )
+      }
+      requestHaptic()
     }
   }
 
@@ -108,6 +154,12 @@
     players = result.players
     if (result.appliedDelta !== 0) {
       pushHistory({ type: 'commanderTax', playerId: id, commanderIndex, delta: result.appliedDelta })
+      const player = players.find(candidate => candidate.id === id)
+      if (player) {
+        const commander = player.commanders[commanderIndex]?.name ?? 'Commander'
+        announce(`${player.name}, ${commander} commander tax is ${player.commanderTax[commanderIndex] ?? 0}.`)
+      }
+      requestHaptic()
     }
   }
 
@@ -120,22 +172,42 @@
   }
 
   function setMonarch(id: number) {
-    monarchId = monarchId === id ? null : id
+    const player = players.find(candidate => candidate.id === id)
+    const takingMonarch = monarchId !== id
+    monarchId = takingMonarch ? id : null
+    if (player) announce(takingMonarch ? `${player.name} is the monarch.` : `${player.name} is no longer the monarch.`)
+    requestHaptic()
   }
 
   function setInitiative(id: number) {
-    initiativeId = initiativeId === id ? null : id
+    const player = players.find(candidate => candidate.id === id)
+    const takingInitiative = initiativeId !== id
+    initiativeId = takingInitiative ? id : null
+    if (player) {
+      announce(takingInitiative ? `${player.name} has the initiative.` : `${player.name} no longer has the initiative.`)
+    }
+    requestHaptic()
   }
 
   function toggleDayNight() {
     dayNight = dayNight === 'day' ? 'night' : 'day'
+    announce(`It is now ${dayNight}.`)
+    requestHaptic()
   }
 
   function undo() {
     if (history.length === 0) return
     const entry = history[history.length - 1]
+    const player = players.find(candidate => candidate.id === entry.playerId)
     history = history.slice(0, -1)
     players = undoHistoryEntry(players, entry)
+    const label = entry.type === 'commanderDamage'
+      ? 'commander damage'
+      : entry.type === 'commanderTax'
+        ? 'commander tax'
+        : entry.type
+    announce(`Undid the last ${label} change${player ? ` for ${player.name}` : ''}.`)
+    requestHaptic()
   }
 
   function resetGame() {
@@ -144,6 +216,8 @@
     monarchId = null
     initiativeId = null
     dayNight = 'day'
+    announce('Game reset.')
+    requestHaptic(16)
   }
 
   function newGame() {
@@ -153,6 +227,7 @@
     monarchId = null
     initiativeId = null
     dayNight = 'day'
+    announcement = ''
     phase = 'setup'
     void releaseWakeLock()
   }
@@ -186,8 +261,11 @@
   class="h-dvh w-full overflow-hidden bg-bg"
   style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)"
 >
+  <span class="sr-only" aria-live="polite" aria-atomic="true" data-game-announcement>
+    {announcement}
+  </span>
   {#if phase === 'setup'}
-    <SetupScreen onStart={startGame} />
+    <SetupScreen {lastPod} onStart={startGame} />
   {:else}
     <div class="relative h-full w-full">
       <div

@@ -37,6 +37,7 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 
 - Tap the left half of a counter (marked "−") to lose life, the right half ("+") to gain it — hold either side to rapidly change life by 5
 - The life total and the +/− indicators sit in a single aligned row and shrink automatically for 3-digit or negative totals, so nothing overlaps even on the narrowest phones
+- Life changes briefly tint and scale the affected total, with short haptic feedback where the browser supports vibration
 - Need a bigger jump? A player's detail panel has explicit −10/−5/−1/+1/+5/+10 buttons
 
 ### 🎨 Live commander art via Scryfall
@@ -63,6 +64,7 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 - Installs as a standalone Progressive Web App on modern mobile platforms with a dedicated home-screen icon
 - Precaches the application shell for offline games after the first successful load; new Scryfall searches and uncached artwork still require a connection
 - Requests a screen wake lock while a game is active where the browser supports it, so the shared display does not sleep mid-turn
+- Announces life, counter, role, damage, and undo changes through an assistive live region
 - Every tap target stays reachable and non-overlapping regardless of player count, screen size, or orientation
 
 ### ↩️ Forgiving by default
@@ -70,12 +72,13 @@ Built for one shared device passed around the table — no accounts, no ads, no 
 - Undo reverts the last life, poison, commander-damage, or commander-tax change
 - Reset Life restores everyone to their starting total for a rematch without leaving the game
 - Reset and New Game use clear in-app confirmation dialogs instead of browser prompts
+- Setup can reuse the last pod's names, colors, commanders, player count, and starting life without restoring counters from the previous game
 - Game state — life totals, colors, commanders, monarch/initiative, day/night — persists to `localStorage`, so an accidental refresh never loses the game
 
 ## Getting started
 
 ```bash
-git clone https://github.com/slicedearth/mtg-life-counter.git
+git clone https://github.com/slicedearth/forty-life.git
 cd mtg-life-counter
 npm install
 npm run dev
