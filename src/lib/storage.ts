@@ -1,8 +1,11 @@
 import { PLAYER_COLORS, type CommanderCard, type PartnerMode, type Player } from './types'
+import type { PlayerConfig } from './game'
 import { normalizePlayerName, normalizeScryfallImageUrl } from './security'
 
 export const STORAGE_KEY = 'mtg-life-counter'
 export const STORAGE_VERSION = 1
+export const POD_STORAGE_KEY = 'forty-life-last-pod'
+export const POD_STORAGE_VERSION = 1
 
 const MIN_PLAYERS = 2
 const MAX_PLAYERS = 6
@@ -28,6 +31,11 @@ export interface SavedState {
   monarchId: number | null
   initiativeId: number | null
   dayNight: 'day' | 'night'
+}
+
+export interface SavedPod {
+  players: PlayerConfig[]
+  startingLife: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,14 +68,30 @@ function parseCommander(value: unknown): CommanderCard | null {
   }
 }
 
-function parsePlayer(value: unknown, index: number, startingLife: number, playerCount: number): Player | null {
+function parsePlayerConfig(value: unknown, index: number): PlayerConfig | null {
   if (!isRecord(value)) return null
 
   const commanders = Array.isArray(value.commanders)
     ? value.commanders.slice(0, 2).map(parseCommander).filter((card): card is CommanderCard => card !== null)
     : []
+  const color = typeof value.color === 'string' && PLAYER_COLORS.includes(value.color)
+    ? value.color
+    : PLAYER_COLORS[index % PLAYER_COLORS.length]
+
+  return {
+    name: normalizePlayerName(value.name, `Player ${index + 1}`),
+    color,
+    commanders,
+  }
+}
+
+function parsePlayer(value: unknown, index: number, startingLife: number, playerCount: number): Player | null {
+  if (!isRecord(value)) return null
+  const config = parsePlayerConfig(value, index)
+  if (!config) return null
+
   const rawTax = Array.isArray(value.commanderTax) ? value.commanderTax : []
-  const commanderTax = Array.from({ length: Math.max(1, commanders.length) }, (_, taxIndex) =>
+  const commanderTax = Array.from({ length: Math.max(1, config.commanders.length) }, (_, taxIndex) =>
     boundedInteger(rawTax[taxIndex], 0)
   )
 
@@ -81,19 +105,13 @@ function parsePlayer(value: unknown, index: number, startingLife: number, player
     }
   }
 
-  const color = typeof value.color === 'string' && PLAYER_COLORS.includes(value.color)
-    ? value.color
-    : PLAYER_COLORS[index % PLAYER_COLORS.length]
-
   return {
+    ...config,
     id: index,
-    name: normalizePlayerName(value.name, `Player ${index + 1}`),
-    color,
     life: boundedInteger(value.life, startingLife, -MAX_TRACKED_VALUE),
     poison: boundedInteger(value.poison, 0),
     commanderTax,
     commanderDamage,
-    commanders,
   }
 }
 
@@ -137,6 +155,45 @@ export function loadSavedState(storage: StorageReader = localStorage): SavedStat
     return parseSavedState(storage.getItem(STORAGE_KEY))
   } catch {
     return null
+  }
+}
+
+export function parseSavedPod(raw: string | null): SavedPod | null {
+  if (!raw) return null
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!isRecord(parsed) || parsed.version !== POD_STORAGE_VERSION) return null
+    if (!Array.isArray(parsed.players) || parsed.players.length < MIN_PLAYERS || parsed.players.length > MAX_PLAYERS) {
+      return null
+    }
+
+    const players = parsed.players.map(parsePlayerConfig)
+    if (players.some(player => player === null)) return null
+
+    return {
+      players: players as PlayerConfig[],
+      startingLife: boundedInteger(parsed.startingLife, 40, 1),
+    }
+  } catch {
+    return null
+  }
+}
+
+export function loadSavedPod(storage: StorageReader = localStorage): SavedPod | null {
+  try {
+    return parseSavedPod(storage.getItem(POD_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
+export function saveSavedPod(pod: SavedPod, storage: StorageWriter = localStorage): boolean {
+  try {
+    storage.setItem(POD_STORAGE_KEY, JSON.stringify({ version: POD_STORAGE_VERSION, ...pod }))
+    return true
+  } catch {
+    return false
   }
 }
 

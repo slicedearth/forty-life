@@ -1,19 +1,16 @@
 <script lang="ts">
-  import { Play } from '@lucide/svelte'
+  import { Play, RotateCcw } from '@lucide/svelte'
+  import type { PlayerConfig } from "./game";
+  import type { SavedPod } from "./storage";
   import { PLAYER_COLORS, type CommanderCard } from "./types";
   import CommanderPicker from "./CommanderPicker.svelte";
 
-  interface PlayerConfig {
-    name: string;
-    color: string;
-    commanders: CommanderCard[];
-  }
-
   interface Props {
+    lastPod: SavedPod | null;
     onStart: (players: PlayerConfig[], startingLife: number) => void;
   }
 
-  const { onStart }: Props = $props();
+  const { lastPod, onStart }: Props = $props();
 
   const playerCounts = [2, 3, 4, 5, 6];
   const lifeTotals = [
@@ -34,6 +31,25 @@
   }
 
   let playerConfigs = $state<PlayerConfig[]>(defaultConfigs(4));
+
+  function cloneConfigs(configs: PlayerConfig[]): PlayerConfig[] {
+    return configs.map(config => ({
+      ...config,
+      commanders: config.commanders.map((commander: CommanderCard) => ({ ...commander })),
+    }));
+  }
+
+  function reuseLastPod() {
+    if (!lastPod) return;
+    playerCount = lastPod.players.length;
+    playerConfigs = cloneConfigs(lastPod.players);
+    if (lifeTotals.some(({ value }) => value === lastPod.startingLife)) {
+      startingLife = lastPod.startingLife;
+      customLife = "";
+    } else {
+      customLife = String(lastPod.startingLife);
+    }
+  }
 
   function setPlayerCount(count: number) {
     playerCount = count;
@@ -61,6 +77,25 @@
       <p class="text-xs font-bold text-accent uppercase">Forty Life</p>
       <h1 class="mt-1 text-3xl font-bold text-white">Set up your game</h1>
     </header>
+
+    {#if lastPod}
+      <section class="mt-5 flex items-center justify-between gap-4 border-t border-white/10 pt-4" aria-label="Last pod">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-white">Last pod</p>
+          <p class="truncate text-xs text-white/45">
+            {lastPod.players.length} players · {lastPod.startingLife} life
+          </p>
+        </div>
+        <button
+          type="button"
+          class="flex min-h-11 flex-shrink-0 items-center gap-2 rounded-lg border border-white/15 px-3 text-sm font-semibold text-gray-200 hover:border-white/30 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-accent"
+          onclick={reuseLastPod}
+        >
+          <RotateCcw size={16} strokeWidth={2.25} />
+          Reuse pod
+        </button>
+      </section>
+    {/if}
 
     <section class="mt-7 grid gap-6 border-y border-white/10 py-5 sm:grid-cols-2 sm:gap-8">
       <fieldset>
