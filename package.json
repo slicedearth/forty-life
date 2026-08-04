@@ -21,20 +21,20 @@
     "verify": "npm run test && npm run check && npm run build && npm run test:e2e"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "^4.1.10",
-    "svelte": "^5.56.7",
-    "svelte-check": "^4.7.3",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.7.4",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
-    "vite": "^8.1.5",
+    "vite": "^8.2.0",
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@lucide/svelte": "^1.25.0"
+    "@lucide/svelte": "^1.28.0"
   }
 }
